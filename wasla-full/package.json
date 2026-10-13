@@ -1,0 +1,6 @@
+{
+  "name": "wasla-shop-vercel",
+  "version": "2.0.0",
+  "description": "Wasla Shop - نسخة Vercel (Upstash Redis)",
+  "engines": { "node": ">=18" }
+}
