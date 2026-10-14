@@ -886,6 +886,44 @@
         }
         .search-box select option { background: #1a1f35; }
 
+        .user-form-card {
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 16px;
+            padding: 20px;
+        }
+        .user-form-card h3 { margin-bottom: 16px; }
+        .user-form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+        .user-form-grid .user-form-full { grid-column: 1 / -1; }
+        .user-form-grid input,
+        .user-form-grid select {
+            width: 100%;
+            box-sizing: border-box;
+            padding: 12px 16px;
+            margin: 0;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            background: rgba(255, 255, 255, 0.07);
+            color: #fff;
+            font-size: 14px;
+            direction: rtl;
+        }
+        .user-form-grid input::placeholder { color: #8892b0; }
+        .user-form-grid select option { background: #1a1f35; color: #fff; }
+        .user-form-grid input:focus,
+        .user-form-grid select:focus {
+            outline: none;
+            border-color: #ff5b5b;
+            background: rgba(255, 255, 255, 0.1);
+        }
+        .user-form-grid .password-wrapper { margin: 0; }
+        .user-form-grid .password-wrapper input { margin: 0; }
+
         @media (max-width: 768px) {
             .container { padding: 15px; }
             .header h1 { font-size: 20px; }
@@ -1520,22 +1558,24 @@
 
             <!-- تبويب المستخدمين -->
             <div class="tab-content" id="manager-users">
-                <div style="margin:15px 0;">
+                <div class="user-form-card" style="margin:15px 0;">
                     <h3 style="color:#f39c12;">➕ إضافة مستخدم جديد</h3>
-                    <input type="text" id="mNewUserUsername" placeholder="اسم المستخدم">
-                    <div class="password-wrapper">
-                        <input type="password" id="mNewUserPassword" placeholder="كلمة المرور">
-                        <button class="toggle-password" onclick="togglePasswordVisibility('mNewUserPassword', this)" type="button">👁️</button>
+                    <div class="user-form-grid">
+                        <input type="text" id="mNewUserUsername" placeholder="👤 اسم المستخدم">
+                        <div class="password-wrapper">
+                            <input type="password" id="mNewUserPassword" placeholder="كلمة المرور">
+                            <button class="toggle-password" onclick="togglePasswordVisibility('mNewUserPassword', this)" type="button">👁️</button>
+                        </div>
+                        <select id="mNewUserRole">
+                            <option value="client">👤 عميل</option>
+                            <option value="cashier">💰 كاشير</option>
+                            <option value="technician">🔧 فني صيانة</option>
+                            <option value="manager">👨‍💼 مدير</option>
+                        </select>
+                        <input type="tel" id="mNewUserPhone" placeholder="📱 رقم الموبايل *" required>
+                        <input type="email" id="mNewUserEmail" class="user-form-full" placeholder="📧 البريد الإلكتروني (اختياري)">
                     </div>
-                    <select id="mNewUserRole">
-                        <option value="client">👤 عميل</option>
-                        <option value="cashier">💰 كاشير</option>
-                        <option value="technician">🔧 فني صيانة</option>
-                        <option value="manager">👨‍💼 مدير</option>
-                    </select>
-                    <input type="tel" id="mNewUserPhone" placeholder="📱 رقم الموبايل *" required>
-                    <input type="email" id="mNewUserEmail" placeholder="📧 البريد الإلكتروني (اختياري)">
-                    <button class="btn btn-success" onclick="addUserByManagerV2()" style="width:100%;">إضافة المستخدم</button>
+                    <button class="btn btn-success" onclick="addUserByManagerV2()" style="width:100%;">➕ إضافة المستخدم</button>
                 </div>
                 <hr style="border-color:rgba(255,255,255,0.1);margin:15px 0;">
                 <h3 style="color:#3498db;">📋 قائمة المستخدمين</h3>
