@@ -4,6 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Wasla - أنظمة المراقبة والبصمة والشبكات</title>
+    <link rel="manifest" href="/manifest.webmanifest">
+    <meta name="theme-color" content="#0b0e1a">
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <script>try{if(localStorage.getItem('wasla_theme')==='light')document.documentElement.classList.add('w-light')}catch(e){}</script>
     <!-- Chart.js للرسوم البيانية -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <!-- jsPDF للـ PDF -->
@@ -20,6 +25,7 @@
     <!-- GSAP: حركات الواجهة -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.4/gsap.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.4/ScrollTrigger.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.4/Flip.min.js"></script>
     <style>
         /* GSAP بيتولى الحركة بدل CSS عشان ميحصلش تضارب */
         html.gsap-on .tab-content.active { animation: none; }
@@ -66,6 +72,61 @@
         .w-aurora i:nth-child(2) { width:40vmax; height:40vmax; background:radial-gradient(circle,#1a8cff,transparent 65%); bottom:-12vmax; left:-8vmax; }
         .w-aurora i:nth-child(3) { width:30vmax; height:30vmax; background:radial-gradient(circle,#8e44ad,transparent 65%); top:35%; left:35%; opacity:0.3; }
 
+
+        /* ===== تنبيه تأخير الطلب ===== */
+        .tech-tag.late { background: rgba(231,76,60,0.2); color: #ff8b80; border: 1px solid rgba(231,76,60,0.5); }
+        tr.w-late > td:first-child { box-shadow: inset -3px 0 0 #e74c3c; }
+
+        /* ===== مقارنة بالفترة السابقة ===== */
+        .w-d { display:block; font-size:11px; margin-top:4px; font-weight:bold; }
+        .w-d.up { color:#2ecc71; } .w-d.down { color:#ff6b6b; } .w-d.same { color:#8892b0; }
+
+        /* ===== Skeleton: حاويات فاضية بتلمع لحد ما البيانات توصل ===== */
+        #mReportsBox:empty, #mPartsBox:empty, #mAlertsBox:empty, #mRequestsTable:empty {
+            min-height: 140px; border-radius: 14px;
+            background: linear-gradient(100deg, rgba(255,255,255,0.04) 30%, rgba(255,255,255,0.12) 50%, rgba(255,255,255,0.04) 70%);
+            background-size: 220% 100%; animation: wShimmer 1.3s linear infinite;
+        }
+        @keyframes wShimmer { from { background-position: 120% 0; } to { background-position: -120% 0; } }
+
+        /* ===== ثيم فاتح (بيتحوّل بحركة دائرية) ===== */
+        html.w-inv { filter: invert(1) hue-rotate(180deg); background: #fff; }
+        html.w-inv img, html.w-inv video, html.w-inv iframe, html.w-inv .device-image { filter: invert(1) hue-rotate(180deg); }
+        body.login-mode #wThemeBtn { display: none; }
+        ::view-transition-old(root), ::view-transition-new(root) { animation: none; mix-blend-mode: normal; }
+        .w-hbtn { background: rgba(255,255,255,0.08); color: #ccd6f6; border: 1px solid rgba(255,255,255,0.15); border-radius: 10px; padding: 6px 10px; cursor: pointer; font-size: 13px; }
+        .w-hbtn:hover { background: rgba(255,255,255,0.16); }
+        #wSearchBtn { display: none; }
+
+        /* ===== بحث سريع (Ctrl+K) ===== */
+        .w-pal-ov { position:fixed; inset:0; background:rgba(0,0,0,0.7); backdrop-filter:blur(4px); z-index:10040; display:flex; justify-content:center; align-items:flex-start; padding:12vh 14px 0; }
+        .w-pal { width:100%; max-width:560px; background:#1a1f35; border:1px solid rgba(255,255,255,0.14); border-radius:18px; box-shadow:0 25px 70px rgba(0,0,0,0.6); overflow:hidden; }
+        .w-pal input { width:100%; padding:16px 18px; background:transparent; border:none; border-bottom:1px solid rgba(255,255,255,0.1); color:#fff; font-size:16px; outline:none; direction:rtl; }
+        .w-pal-list { max-height:50vh; overflow-y:auto; }
+        .w-pal-it { padding:11px 18px; display:flex; justify-content:space-between; gap:10px; align-items:center; cursor:pointer; border-bottom:1px solid rgba(255,255,255,0.05); font-size:14px; }
+        .w-pal-it small { color:#8892b0; display:block; margin-top:2px; }
+        .w-pal-it.sel, .w-pal-it:hover { background:rgba(255,91,91,0.14); }
+        .w-pal-empty { padding:18px; text-align:center; color:#8892b0; font-size:14px; }
+        .w-pal-foot { padding:8px 14px; font-size:11px; color:#8892b0; display:flex; gap:12px; flex-wrap:wrap; }
+        @keyframes wFlash { 0%,100% { box-shadow:none; } 30% { box-shadow:0 0 0 3px rgba(255,200,60,0.85); } }
+        .w-flash { animation: wFlash 1.4s ease; }
+
+        /* ===== ترتيب كروت الإحصائيات بالسحب (ماوس) ===== */
+        .stat-card.w-dragging { opacity: 0.85; outline: 2px dashed rgba(255,255,255,0.5); cursor: grabbing; }
+        body.w-noselect { user-select: none; -webkit-user-select: none; }
+
+        /* ===== لوحة الفني على الموبايل: كروت كبيرة + سحب للتنفيذ ===== */
+        @media (max-width: 700px) {
+            #technicianRequestsContainer .table-responsive { overflow: visible; }
+            #technicianRequestsContainer table, #technicianRequestsContainer tbody, #technicianRequestsContainer tr, #technicianRequestsContainer td { display: block; width: 100%; }
+            #technicianRequestsContainer thead { display: none; }
+            #technicianRequestsContainer tr { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; padding: 12px; margin-bottom: 12px; touch-action: pan-y; }
+            #technicianRequestsContainer td { display: flex; justify-content: space-between; gap: 12px; padding: 6px 0; border: none; text-align: right; max-width: none !important; }
+            #technicianRequestsContainer td::before { content: attr(data-label); color: #8892b0; font-size: 12px; flex: 0 0 auto; }
+            #technicianRequestsContainer td:last-child { display: block; padding-top: 10px; }
+            #technicianRequestsContainer td:last-child::before { display: none; }
+            #technicianRequestsContainer .table-action-btn { width: 100%; padding: 14px; font-size: 15px; margin-top: 6px; }
+        }
         /* ===== جملة الترحيب ===== */
         .w-welcome { margin-top:4px; font-size:13px; color:#ccd6f6; min-height:18px; }
         .w-welcome::after { content:'|'; margin-inline-start:2px; opacity:0.7; animation: wBlink 0.8s steps(1) infinite; }
@@ -1429,6 +1490,8 @@
         </div>
         <div class="user-info">
             <span id="userDisplay" style="color:#8892b0;"></span>
+            <button class="w-hbtn" id="wSearchBtn" type="button" title="بحث سريع (Ctrl+K)">🔎 بحث</button>
+            <button class="w-hbtn" id="wThemeBtn" type="button" title="تبديل الوضع الفاتح/الداكن">🌙</button>
             <button class="btn btn-outline btn-sm" onclick="openPasswordModal(false)" id="pwBtn" style="display:none;">🔑 كلمة المرور</button>
             <button class="btn btn-danger btn-sm" onclick="logout()" id="logoutBtn" style="display:none;">🚪 خروج</button>
         </div>
@@ -4182,7 +4245,7 @@ ${i+1}. المعرف: ${r.id}
             return;
         }
 
-        const sorted = [...requests].reverse();
+        const sorted = [...requests].reverse().sort((a, b) => (isLate(b) ? 1 : 0) - (isLate(a) ? 1 : 0));
 
         let html = `<div class="table-responsive"><table>
             <thead><tr>
@@ -4235,7 +4298,7 @@ ${i+1}. المعرف: ${r.id}
                 `<div class="rating-display"><span class="stars-small">${'★'.repeat(rating.rating)}${'☆'.repeat(5-rating.rating)}</span><span class="rating-text">(${rating.rating})</span></div>` :
                 '⭐ لم يقيم';
 
-            html += `<tr class="priority-${r.priority || 'normal'}">
+            html += `<tr class="priority-${r.priority || 'normal'}${isLate(r) ? ' w-late' : ''}">
                 <td>${index + 1}</td>
                 <td><strong>${esc(creatorOf(r))}</strong><div style="font-size:10px;color:#8892b0;cursor:pointer;" title="رقم الوصل — اضغط للنسخ" onclick="copyRequestId('${esc(r.id)}')">${esc(r.id)}</div></td>
                 <td>${r.clientName}</td>
@@ -4252,13 +4315,13 @@ ${i+1}. المعرف: ${r.id}
                         </div>
                     </div>
                 </td>
-                <td><span class="status-badge ${status.class}">${status.text}</span>${miniSteps(r)}${techTag(r)}${moneyTag(r)}${notifiedTag(r)}</td>
+                <td><span class="status-badge ${status.class}">${status.text}</span>${miniSteps(r)}${lateTag(r)}${techTag(r)}${moneyTag(r)}${notifiedTag(r)}</td>
                 ${role !== 'client' ? `<td style="font-size:12px;max-width:150px;word-break:break-word;">${r.deviceDetails || '-'}</td>` : ''}
                 ${role === 'client' ? `<td style="font-size:12px;">${r.createdAt}</td>` : ''}
                 <td><div style="display:flex;gap:4px;flex-wrap:wrap;justify-content:center;">${imagesHtml}</div></td>
                 ${role === 'manager' ? `<td style="font-size:12px;white-space:nowrap;">${esc(handBackOf(r)) || '-'}</td>` : ''}
                 ${role === 'manager' ? `<td>${ratingHtml}</td>` : ''}
-                ${role === 'manager' ? `<td><div style="display:flex;flex-direction:column;gap:4px;">${cashierActions(r)}</div></td>` : ''}
+                ${role === 'manager' ? `<td><div style="display:flex;flex-direction:column;gap:4px;">${cashierActions(r)}<button class="table-action-btn warning" onclick="deleteRequestFull('${esc(r.id)}')">🗑️ حذف الطلب كله</button></div></td>` : ''}
                 ${role === 'cashier' ? `<td><div style="display:flex;flex-direction:column;gap:4px;">${cashierActions(r)}</div></td>` : ''}
                 ${role === 'client' ? `<td>${r.status === 'ready_for_pickup' ? `<button class="table-action-btn" onclick="confirmClientPickup('${r.id}')">✅ استلمت الجهاز</button>` : (r.status === 'picked_up' ? '<span style="color:#8e44ad;font-size:11px;">📦 تم الاستلام</span>' : '<span style="color:#8892b0;font-size:11px;">-</span>')}</td>` : ''}
             </tr>`;
@@ -5126,8 +5189,8 @@ ${o.notice ? `<div class="note">${esc(o.notice)}</div>` : ''}
     }
 
     // ---------------- التقارير ----------------
-    let reportRange = '30';
-    function setReportRange(v) { reportRange = v; renderManagerReports(); }
+    let reportRange = (function () { try { var v = localStorage.getItem('wasla_report_range'); return ['today', '7', '30', '90', 'all'].indexOf(v) > -1 ? v : '30'; } catch (e) { return '30'; } })();
+    function setReportRange(v) { reportRange = v; try { localStorage.setItem('wasla_report_range', v); } catch (e) {} renderManagerReports(); }
     function renderManagerReports() {
         const box = $id('mReportsBox'); if (!box) return;
         const d = getData(), now = Date.now();
@@ -5135,10 +5198,27 @@ ${o.notice ? `<div class="note">${esc(o.notice)}</div>` : ''}
         const start = reportRange === 'today' ? startOfToday.getTime() : reportRange === 'all' ? 0 : now - Number(reportRange) * DAY;
         const inR = ts => ts && ts >= start;
         const reqs = d.requests;
+        let pStart = 0, pEnd = 0, hasPrev = false;
+        if (reportRange === 'today') { pEnd = startOfToday.getTime(); pStart = pEnd - DAY; hasPrev = true; }
+        else if (reportRange !== 'all') { pEnd = start; pStart = start - Number(reportRange) * DAY; hasPrev = true; }
+        const inP = ts => ts && ts >= pStart && ts < pEnd;
+        const dl = (c, p) => {
+            if (!hasPrev || (!c && !p)) return '';
+            if (!p) return '<small class="w-d up">▲ جديد عن الفترة السابقة</small>';
+            const pct = Math.round((c - p) / p * 100);
+            if (pct === 0) return '<small class="w-d same">= زي الفترة السابقة</small>';
+            return `<small class="w-d ${pct > 0 ? 'up' : 'down'}">${pct > 0 ? '▲' : '▼'} ${Math.abs(pct)}% عن الفترة السابقة</small>`;
+        };
         let revenue = 0, payCount = 0;
         reqs.forEach(r => (r.payments || []).forEach(p => { if (inR(p.ts)) { revenue += Number(p.amount) || 0; payCount++; } }));
         const newOrders = reqs.filter(r => inR(r.createdAtTs)).length;
         const delivered = reqs.filter(r => inR(r.pickedUpTs)).length;
+        let prevRevenue = 0, prevNew = 0, prevDelivered = 0;
+        if (hasPrev) {
+            reqs.forEach(r => (r.payments || []).forEach(p => { if (inP(p.ts)) prevRevenue += Number(p.amount) || 0; }));
+            prevNew = reqs.filter(r => inP(r.createdAtTs)).length;
+            prevDelivered = reqs.filter(r => inP(r.pickedUpTs)).length;
+        }
         const outstanding = reqs.reduce((a, r) => a + (Number(r.price) > 0 && r.status !== 'pending' ? remainingOf(r) : 0), 0);
         const done = reqs.filter(r => inR(r.completedTs) && r.techReceivedTs);
         const avgDays = done.length ? (done.reduce((a, r) => a + (r.completedTs - r.techReceivedTs) / DAY, 0) / done.length) : null;
@@ -5172,11 +5252,12 @@ ${o.notice ? `<div class="note">${esc(o.notice)}</div>` : ''}
             <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px;">
                 <select onchange="setReportRange(this.value)">${sel('today', 'النهارده')}${sel('7', 'آخر 7 أيام')}${sel('30', 'آخر 30 يوم')}${sel('90', 'آخر 90 يوم')}${sel('all', 'كل الفترات')}</select>
                 <button class="btn btn-warning" onclick="exportRequestsCSV()">📥 تصدير الطلبات (CSV/Excel)</button>
+                <button class="btn btn-outline" onclick="exportReportPDF()">📄 تصدير التقرير PDF</button>
             </div>
             <div class="ct-summary">
-                <div class="it"><b>${money(revenue)}</b><span>💰 إيراد محصّل (${payCount} دفعة)</span></div>
-                <div class="it"><b>${newOrders}</b><span>📥 طلبات جديدة</span></div>
-                <div class="it"><b>${delivered}</b><span>📦 أجهزة اتسلمت</span></div>
+                <div class="it"><b>${money(revenue)}</b><span>💰 إيراد محصّل (${payCount} دفعة)</span>${dl(revenue, prevRevenue)}</div>
+                <div class="it"><b>${newOrders}</b><span>📥 طلبات جديدة</span>${dl(newOrders, prevNew)}</div>
+                <div class="it"><b>${delivered}</b><span>📦 أجهزة اتسلمت</span>${dl(delivered, prevDelivered)}</div>
                 <div class="it"><b>${avgDays === null ? '-' : avgDays.toFixed(1) + ' يوم'}</b><span>⏱️ متوسط وقت الصيانة</span></div>
                 <div class="it"><b>${money(outstanding)}</b><span>⏳ مبالغ لسه متحصلتش</span></div>
                 <div class="it"><b>${partsCount}</b><span>🔩 قطع مستخدمة (تكلفة ${money(partsCost)})</span></div>
@@ -5716,5 +5797,233 @@ window.holdConfirm = function (message, opts) {
 })();
 </script>
 
+<script>
+/* ===== إضافات Wasla: حذف الطلب · تأخير · بحث سريع · اختصارات · ثيم · PDF · فلاتر محفوظة · PWA ===== */
+(function () {
+    var $ = function (id) { return document.getElementById(id); };
+    var lsGet = function (k) { try { return localStorage.getItem(k); } catch (e) { return null; } };
+    var lsSet = function (k, v) { try { localStorage.setItem(k, v); } catch (e) {} };
+    var E = function (x) { return String(x == null ? '' : x).replace(/[&<>"']/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]; }); };
+
+    /* --- تأخير الطلب --- */
+    function todayIso() { var d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
+    window.isLate = function (r) { return !!(r && r.eta && r.status !== 'picked_up' && r.eta < todayIso()); };
+    window.lateTag = function (r) {
+        if (!window.isLate(r)) return '';
+        var days = Math.max(1, Math.round((new Date(todayIso() + 'T00:00:00') - new Date(r.eta + 'T00:00:00')) / 864e5));
+        return '<span class="tech-tag late">⏰ متأخر ' + days + ' يوم</span>';
+    };
+
+    /* --- حذف الطلب كله (للمدير فقط) --- */
+    window.deleteRequestFull = async function (id) {
+        if (!currentUser || currentUser.role !== 'manager') { showToast('❌ الحذف للمدير فقط', 'error'); return; }
+        var data = getData(), r = data.requests.find(function (x) { return x.id === id; });
+        if (!r) { showToast('⚠️ الطلب غير موجود', 'warning'); return; }
+        var ok = await holdConfirm('🗑️ هتحذف الطلب كله نهائياً:\nالعميل: ' + r.clientName + ' — السيريال: ' + r.serialNumber + ' — الوصل: ' + r.id + '\nالمدفوعات والسجل والصور المرتبطة بيه هتتشال معاه ومش هتقدر ترجّعه (غير من نسخة احتياطية).', { ms: 1800 });
+        if (!ok) return;
+        data = getData();
+        data.requests = data.requests.filter(function (x) { return x.id !== id; });
+        saveData(data);
+        addLog('حذف ' + currentUser.username + ' الطلب كله: ' + r.id + ' (' + r.clientName + ' / ' + r.serialNumber + ')');
+        showToast('🗑️ تم حذف الطلب ' + r.id, 'success');
+        try { renderManagerSearch(); } catch (e) {}
+        try { updateManagerStats(); } catch (e) {}
+    };
+
+    /* --- تصدير التقرير PDF (من نافذة الطباعة: Save as PDF) --- */
+    window.exportReportPDF = function () {
+        var box = $('mReportsBox'); if (!box) return;
+        var clone = box.cloneNode(true);
+        clone.querySelectorAll('select, button, .toggle-password').forEach(function (n) { n.remove(); });
+        var sel = box.querySelector('select');
+        var label = sel ? sel.options[sel.selectedIndex].text : '';
+        var w = window.open('', '_blank');
+        if (!w) { showToast('⚠️ المتصفح منع النافذة، اسمح بالنوافذ المنبثقة وجرّب تاني', 'warning'); return; }
+        w.document.write('<html dir="rtl" lang="ar"><head><meta charset="utf-8"><title>تقرير Wasla</title><style>' +
+            'body{font-family:Tahoma,Arial,sans-serif;color:#111;padding:24px;direction:rtl}h1{margin:0 0 4px}h3{margin:18px 0 6px}' +
+            '.ct-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.it{border:1px solid #bbb;border-radius:8px;padding:10px}.it b{display:block;font-size:18px}.it span{font-size:12px;color:#444}' +
+            '.w-d{display:block;font-size:11px;margin-top:3px}.w-d.up{color:#1a8a4a}.w-d.down{color:#c0392b}' +
+            '.bars{display:flex;align-items:flex-end;gap:4px;height:150px}.bar-col{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end}.bar-f{width:100%;background:#c0392b;border-radius:3px 3px 0 0}.bar-v{font-size:9px}' +
+            'table{width:100%;border-collapse:collapse;font-size:13px}th,td{border:1px solid #bbb;padding:6px;text-align:center}.al-row{display:flex;gap:8px;align-items:center;margin:4px 0}.bar{background:#ddd}.bar>div{background:#c0392b!important}' +
+            '.ct-sub{font-size:12px;color:#555}</style></head><body><h1>Wasla — تقرير الأداء</h1><div class="ct-sub">' + E(label) + ' — ' + new Date().toLocaleDateString('ar-EG') + '</div>' + clone.innerHTML +
+            '<script>setTimeout(function(){window.print()},400)<\/script></body></html>');
+        w.document.close();
+    };
+
+    /* --- ثيم فاتح/داكن بحركة دائرية --- */
+    var themeBtn = $('wThemeBtn'), root = document.documentElement;
+    function themeIcon() { if (themeBtn) themeBtn.textContent = root.classList.contains('w-light') ? '☀️' : '🌙'; }
+    function applyInv() { root.classList.toggle('w-inv', root.classList.contains('w-light') && !document.body.classList.contains('login-mode')); }
+    function flip() { root.classList.toggle('w-light'); lsSet('wasla_theme', root.classList.contains('w-light') ? 'light' : 'dark'); themeIcon(); applyInv(); }
+    new MutationObserver(applyInv).observe(document.body, { attributes: true, attributeFilter: ['class'] });
+    applyInv();
+    if (themeBtn) themeBtn.addEventListener('click', function (e) {
+        var x = e.clientX || innerWidth - 40, y = e.clientY || 40;
+        var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        if (!document.startViewTransition || reduce) { flip(); return; }
+        var r = Math.hypot(Math.max(x, innerWidth - x), Math.max(y, innerHeight - y));
+        var t = document.startViewTransition(flip);
+        t.ready.then(function () {
+            root.animate({ clipPath: ['circle(0px at ' + x + 'px ' + y + 'px)', 'circle(' + r + 'px at ' + x + 'px ' + y + 'px)'] },
+                { duration: 650, easing: 'ease-in-out', pseudoElement: '::view-transition-new(root)' });
+        }).catch(function () {});
+    });
+    themeIcon();
+
+    /* --- إظهار زرار البحث بعد الدخول بس --- */
+    var lo = $('logoutBtn'), sb = $('wSearchBtn');
+    function syncBtns() { if (sb && lo) sb.style.display = (lo.style.display === 'none' || !lo.style.display) ? 'none' : 'inline-block'; }
+    if (lo) { new MutationObserver(syncBtns).observe(lo, { attributes: true, attributeFilter: ['style'] }); syncBtns(); }
+
+    /* --- بحث سريع (Ctrl+K) --- */
+    var STATUS = { pending: '⏳ قيد الانتظار', cashier_received: '📥 استلمه الكاشير', manager_accepted: '✅ في المخزن', ready_for_pickup: '🔔 جاهز للاستلام', picked_up: '📦 تم التسليم' };
+    function norm(x) { return String(x == null ? '' : x).toLowerCase().replace(/[\s\-_]/g, ''); }
+    function openPalette() {
+        if (!currentUser || $('wPal')) return;
+        var ov = document.createElement('div'); ov.className = 'w-pal-ov'; ov.id = 'wPal';
+        ov.innerHTML = '<div class="w-pal" role="dialog" aria-label="بحث سريع"><input type="text" placeholder="🔎 ابحث باسم العميل أو السيريال أو رقم الوصل أو الموبايل..." autocomplete="off"><div class="w-pal-list"></div><div class="w-pal-foot"><span>↑↓ للتنقل</span><span>Enter للفتح</span><span>Esc للإغلاق</span></div></div>';
+        document.body.appendChild(ov);
+        var inp = ov.querySelector('input'), list = ov.querySelector('.w-pal-list'), items = [], sel = 0;
+        function draw() {
+            var q = norm(inp.value), all = (getData().requests || []);
+            items = (q ? all.filter(function (r) { return [r.clientName, r.serialNumber, r.id, r.clientPhone, r.deviceType, r.createdBy].some(function (v) { return norm(v).indexOf(q) > -1; }); }) : all.slice(-8).reverse()).slice(0, 8);
+            sel = 0;
+            list.innerHTML = items.length ? items.map(function (r, i) {
+                return '<div class="w-pal-it' + (i === 0 ? ' sel' : '') + '" data-i="' + i + '"><div><b>' + E(r.clientName) + '</b> — ' + E(r.deviceType || '') + ' ' + E(r.serialNumber) + '<small>' + E(r.id) + (r.clientPhone ? ' • ' + E(r.clientPhone) : '') + '</small></div><span>' + (STATUS[r.status] || '') + '</span></div>';
+            }).join('') : '<div class="w-pal-empty">مفيش نتائج مطابقة</div>';
+        }
+        function mark() { list.querySelectorAll('.w-pal-it').forEach(function (n, i) { n.classList.toggle('sel', i === sel); if (i === sel) n.scrollIntoView({ block: 'nearest' }); }); }
+        function close() { document.removeEventListener('keydown', onKey, true); ov.remove(); }
+        function pick(i) { var r = items[i]; if (!r) return; close(); goToRequest(r); }
+        function onKey(e) {
+            if (e.key === 'Escape') { e.preventDefault(); close(); }
+            else if (e.key === 'ArrowDown') { e.preventDefault(); sel = Math.min(items.length - 1, sel + 1); mark(); }
+            else if (e.key === 'ArrowUp') { e.preventDefault(); sel = Math.max(0, sel - 1); mark(); }
+            else if (e.key === 'Enter') { e.preventDefault(); pick(sel); }
+        }
+        document.addEventListener('keydown', onKey, true);
+        inp.addEventListener('input', draw);
+        list.addEventListener('click', function (e) { var n = e.target.closest('.w-pal-it'); if (n) pick(+n.dataset.i); });
+        ov.addEventListener('pointerdown', function (e) { if (e.target === ov) close(); });
+        draw(); inp.focus();
+    }
+    function goToRequest(r) {
+        var role = currentUser.role;
+        if (role === 'manager' && typeof switchManagerTab === 'function') switchManagerTab('manager-requests');
+        setTimeout(function () {
+            var panel = document.querySelector('.panel.active') || document;
+            var box = Array.prototype.find.call(panel.querySelectorAll('.search-box input[type="text"]'), function (i) { return i.offsetParent !== null; });
+            if (box) { box.value = r.id; box.dispatchEvent(new Event('input', { bubbles: true })); }
+            setTimeout(function () {
+                var el = Array.prototype.find.call(document.querySelectorAll('[onclick*="' + r.id + '"]'), function (n) { return n.offsetParent !== null; });
+                var row = el && (el.closest('tr') || el.closest('.ct-card'));
+                if (row) { row.scrollIntoView({ behavior: 'smooth', block: 'center' }); row.classList.add('w-flash'); setTimeout(function () { row.classList.remove('w-flash'); }, 1500); }
+                else showToast('🔎 ' + r.clientName + ' — ' + r.serialNumber, 'info', 3000);
+            }, 250);
+        }, 120);
+    }
+    if (sb) sb.addEventListener('click', openPalette);
+
+    /* --- اختصارات الكيبورد --- */
+    function typing(t) { return t && (/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName) || t.isContentEditable); }
+    document.addEventListener('keydown', function (e) {
+        if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); openPalette(); return; }
+        if (e.ctrlKey || e.metaKey || e.altKey || typing(e.target) || document.querySelector('.modal.active, .w-hold-ov, #wPal') || !currentUser) return;
+        if (e.key === '/') { e.preventDefault(); openPalette(); }
+        else if (e.key === '?') showToast('⌨️ الاختصارات: Ctrl+K أو / للبحث • 1–9 للتنقل بين تبويبات المدير • Esc يقفل النوافذ', 'info', 7000);
+        else if (/^[1-9]$/.test(e.key) && typeof switchManagerTab === 'function') {
+            var t = $('managerTabs'); if (!t || t.offsetParent === null) return;
+            var b = t.querySelectorAll('.tab-btn')[Number(e.key) - 1]; if (b) b.click();
+        }
+    });
+
+    /* --- فلاتر محفوظة (حالة/أولوية الطلبات) --- */
+    var fT = 0;
+    function restoreFilters() {
+        ['mStatusFilter', 'mPriorityFilter'].forEach(function (id) {
+            var el = $(id); if (!el) return;
+            if (!el.dataset.wr) {
+                el.dataset.wr = '1';
+                var v = lsGet('wasla_f_' + id);
+                if (v && Array.prototype.some.call(el.options, function (o) { return o.value === v; }) && el.value !== v) { el.value = v; try { renderManagerSearch(); } catch (e) {} }
+                el.addEventListener('change', function () { lsSet('wasla_f_' + id, el.value); });
+            }
+        });
+    }
+    new MutationObserver(function () { clearTimeout(fT); fT = setTimeout(restoreFilters, 80); }).observe(document.body, { childList: true, subtree: true });
+
+    /* --- لوحة الفني على الموبايل: عناوين الحقول + سحب لتنفيذ الإجراء الأساسي --- */
+    var lT = 0;
+    function labelTables() {
+        document.querySelectorAll('#technicianRequestsContainer table:not([data-lab])').forEach(function (tb) {
+            tb.dataset.lab = '1';
+            var heads = Array.prototype.map.call(tb.querySelectorAll('thead th'), function (h) { return h.textContent.trim(); });
+            tb.querySelectorAll('tbody tr').forEach(function (tr) { tr.querySelectorAll('td').forEach(function (td, i) { if (heads[i]) td.setAttribute('data-label', heads[i]); }); });
+        });
+    }
+    new MutationObserver(function () { clearTimeout(lT); lT = setTimeout(labelTables, 60); }).observe(document.body, { childList: true, subtree: true });
+    var sw = null;
+    document.addEventListener('pointerdown', function (e) {
+        if (e.pointerType !== 'touch' || !window.matchMedia('(max-width: 700px)').matches) return;
+        var tr = e.target.closest && e.target.closest('#technicianRequestsContainer tbody tr');
+        if (!tr || e.target.closest('button, input, select, a')) return;
+        sw = { tr: tr, x: e.clientX, y: e.clientY, dx: 0, lock: false };
+    }, { passive: true });
+    document.addEventListener('pointermove', function (e) {
+        if (!sw) return;
+        var dx = e.clientX - sw.x, dy = e.clientY - sw.y;
+        if (!sw.lock && Math.abs(dy) > 14 && Math.abs(dy) > Math.abs(dx)) { sw = null; return; }
+        if (Math.abs(dx) > 10) sw.lock = true;
+        if (sw.lock) { sw.dx = dx; sw.tr.style.transform = 'translateX(' + dx * 0.6 + 'px)'; sw.tr.style.opacity = String(1 - Math.min(0.5, Math.abs(dx) / 400)); }
+    }, { passive: true });
+    function endSw() {
+        if (!sw) return; var s = sw; sw = null;
+        s.tr.style.transition = 'transform .25s, opacity .25s'; s.tr.style.transform = ''; s.tr.style.opacity = '';
+        setTimeout(function () { s.tr.style.transition = ''; }, 280);
+        if (Math.abs(s.dx) > 110) { var b = s.tr.querySelector('td:last-child .table-action-btn'); if (b) b.click(); }
+    }
+    document.addEventListener('pointerup', endSw); document.addEventListener('pointercancel', endSw);
+
+    /* --- ترتيب كروت الإحصائيات بالسحب (ماوس) + حفظ الترتيب --- */
+    (function () {
+        var grid = $('mainStats'); if (!grid) return;
+        var KEY = 'wasla_stat_order';
+        function keyOf(c) { var n = c.querySelector('.number'); return n ? n.id : ''; }
+        try {
+            var ord = JSON.parse(lsGet(KEY) || '[]'), map = {};
+            if (Array.isArray(ord) && ord.length) { Array.prototype.forEach.call(grid.children, function (c) { map[keyOf(c)] = c; }); ord.forEach(function (k) { if (map[k]) grid.appendChild(map[k]); }); }
+        } catch (e) {}
+        var hold = 0, drag = null, start = null;
+        grid.addEventListener('pointerdown', function (e) {
+            if (e.pointerType !== 'mouse' || e.button !== 0) return;
+            var c = e.target.closest('.stat-card'); if (!c) return;
+            start = { x: e.clientX, y: e.clientY };
+            hold = setTimeout(function () { drag = { c: c, id: e.pointerId }; c.classList.add('w-dragging'); document.body.classList.add('w-noselect'); try { c.setPointerCapture(e.pointerId); } catch (er) {} }, 400);
+        });
+        grid.addEventListener('pointermove', function (e) {
+            if (!drag) { if (hold && start && Math.hypot(e.clientX - start.x, e.clientY - start.y) > 8) { clearTimeout(hold); hold = 0; } return; }
+            var el = document.elementFromPoint(e.clientX, e.clientY), over = el && el.closest && el.closest('.stat-card');
+            if (!over || over === drag.c || over.parentNode !== grid) return;
+            var cards = Array.prototype.slice.call(grid.children), st = window.Flip ? Flip.getState(cards) : null;
+            var before = cards.indexOf(drag.c) > cards.indexOf(over);
+            grid.insertBefore(drag.c, before ? over : over.nextSibling);
+            if (st) Flip.from(st, { duration: 0.3, ease: 'power2.out' });
+        });
+        function end() {
+            clearTimeout(hold); hold = 0;
+            if (!drag) return;
+            drag.c.classList.remove('w-dragging'); document.body.classList.remove('w-noselect'); drag = null;
+            lsSet(KEY, JSON.stringify(Array.prototype.map.call(grid.children, keyOf)));
+        }
+        grid.addEventListener('pointerup', end); grid.addEventListener('pointercancel', end);
+        grid.title = 'اضغط مطوّلاً واسحب لترتيب الكروت';
+    })();
+
+    /* --- تثبيت كتطبيق (PWA) --- */
+    if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) {
+        window.addEventListener('load', function () { navigator.serviceWorker.register('/sw.js').catch(function () {}); });
+    }
+})();
+</script>
 </body>
 </html>
