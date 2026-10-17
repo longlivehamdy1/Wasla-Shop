@@ -1583,6 +1583,81 @@
         .lg-cta-btn { padding: 16px 34px; border: none; border-radius: 16px; background: linear-gradient(90deg, #ff5b5b, #b31011); color: #fff; font-size: 16px; font-weight: 800; cursor: pointer; box-shadow: 0 14px 34px rgba(255,60,60,.35); transition: transform .2s, box-shadow .2s; }
         .lg-cta-btn:hover { transform: translateY(-3px); box-shadow: 0 18px 44px rgba(255,60,60,.5); }
         @media (max-width: 900px) { .lg-sec { padding: 60px 18px; } .lg-scroll-cue { display: none; } }
+
+        /* ============================================================ */
+        /* ===== Wasla v6: نفس لغة اللوجن جوه اللوحة (Midnight Network) ===== */
+        /* ============================================================ */
+        body:not(.login-mode) {
+            background:
+                radial-gradient(900px circle at 90% -10%, rgba(255, 60, 60, .13), transparent 60%),
+                radial-gradient(800px circle at 0% 105%, rgba(26, 140, 255, .12), transparent 60%),
+                #060913;
+            background-attachment: fixed;
+        }
+        #wNet { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; opacity: .55; }
+        #app { position: relative; z-index: 1; }
+        body:not(.login-mode) .container {
+            background: linear-gradient(160deg, rgba(20, 26, 48, .6), rgba(10, 14, 30, .55));
+            border: 1px solid rgba(255, 255, 255, .08);
+            box-shadow: 0 30px 80px rgba(0, 0, 0, .5), 0 0 0 1px rgba(255, 255, 255, .03) inset;
+        }
+        #wProg { position: fixed; top: 0; left: 0; right: 0; height: 3px; z-index: 3000; transform-origin: left center; transform: scaleX(0); background: linear-gradient(90deg, #ff5b5b, #ff9d6b, #1a8cff); pointer-events: none; }
+        body.login-mode #wProg { opacity: 0; }
+
+        /* الهيدر */
+        body:not(.login-mode) .header { border-bottom: 1px solid rgba(255, 255, 255, .08); position: relative; }
+        body:not(.login-mode) .header::after { content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 2px; background: linear-gradient(90deg, transparent, #ff5b5b, transparent); opacity: .7; }
+        body:not(.login-mode) .brand-logo { box-shadow: 0 10px 28px rgba(255, 60, 60, .35); }
+
+        /* الكروت: زجاج + بقعة ضوء بتتبع الماوس */
+        body:not(.login-mode) .stat-card, body:not(.login-mode) .card, body:not(.login-mode) .user-card, body:not(.login-mode) .ct-card {
+            position: relative; overflow: hidden; --mx: 50%; --my: 50%;
+            background: linear-gradient(160deg, rgba(255, 255, 255, .06), rgba(255, 255, 255, .02));
+            border: 1px solid rgba(255, 255, 255, .09); backdrop-filter: blur(10px);
+        }
+        body:not(.login-mode) .stat-card::before, body:not(.login-mode) .card::before, body:not(.login-mode) .user-card::before, body:not(.login-mode) .ct-card::before {
+            content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; opacity: 0; transition: opacity .3s;
+            background: radial-gradient(220px circle at var(--mx) var(--my), rgba(255, 91, 91, .18), transparent 65%);
+        }
+        body:not(.login-mode) .stat-card:hover::before, body:not(.login-mode) .card:hover::before, body:not(.login-mode) .user-card:hover::before, body:not(.login-mode) .ct-card:hover::before { opacity: 1; }
+        body:not(.login-mode) .stat-card:hover, body:not(.login-mode) .card:hover { border-color: rgba(255, 91, 91, .55); box-shadow: 0 14px 34px rgba(255, 60, 60, .14); }
+        body:not(.login-mode) .stat-card .number { background: linear-gradient(90deg, #ff5b5b, #ff9d6b); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+
+        /* التابات */
+        body:not(.login-mode) .manager-tabs { background: rgba(255, 255, 255, .04); border: 1px solid rgba(255, 255, 255, .08); backdrop-filter: blur(10px); }
+        body:not(.login-mode) .manager-tabs .tab-btn.active { background: linear-gradient(135deg, rgba(255, 91, 91, .22), rgba(255, 91, 91, .08)); box-shadow: 0 0 22px rgba(255, 60, 60, .18), inset 0 0 0 1px rgba(255, 91, 91, .3); }
+
+        /* الأزرار: لمعة بتعدّي عند المرور */
+        body:not(.login-mode) .btn:not(.btn-outline):not(.btn-sm) { position: relative; overflow: hidden; }
+        body:not(.login-mode) .btn:not(.btn-outline):not(.btn-sm)::after { content: ""; position: absolute; top: 0; bottom: 0; width: 40%; left: -60%; background: linear-gradient(100deg, transparent, rgba(255, 255, 255, .35), transparent); transform: skewX(-20deg); transition: left .7s ease; pointer-events: none; }
+        body:not(.login-mode) .btn:not(.btn-outline):not(.btn-sm):hover::after { left: 130%; }
+
+        /* الحقول: نفس حلقة التركيز بتاعة اللوجن */
+        body:not(.login-mode) #dashboard input:not([type="checkbox"]):not([type="radio"]), body:not(.login-mode) #dashboard select, body:not(.login-mode) #dashboard textarea,
+        body:not(.login-mode) .modal-content input:not([type="checkbox"]):not([type="radio"]), body:not(.login-mode) .modal-content select, body:not(.login-mode) .modal-content textarea {
+            border: 1px solid rgba(255, 255, 255, .1); transition: border-color .25s, background .25s, box-shadow .25s;
+        }
+        body:not(.login-mode) #dashboard input:focus, body:not(.login-mode) #dashboard select:focus, body:not(.login-mode) #dashboard textarea:focus,
+        body:not(.login-mode) .modal-content input:focus, body:not(.login-mode) .modal-content select:focus, body:not(.login-mode) .modal-content textarea:focus {
+            outline: none; border-color: #ff5b5b; background: rgba(255, 255, 255, .1); box-shadow: 0 0 0 4px rgba(255, 91, 91, .15);
+        }
+        body:not(.login-mode) .search-box { background: rgba(255, 255, 255, .04); border: 1px solid rgba(255, 255, 255, .08); backdrop-filter: blur(8px); }
+
+        /* الجداول */
+        body:not(.login-mode) th { background: linear-gradient(180deg, rgba(255, 91, 91, .16), rgba(255, 91, 91, .06)); letter-spacing: .3px; }
+        body:not(.login-mode) .table-responsive tbody tr:hover { background: rgba(255, 91, 91, .07); box-shadow: inset -3px 0 0 #ff5b5b; }
+
+        /* المودالات */
+        body:not(.login-mode) .modal { background: rgba(3, 5, 12, .78); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
+        body:not(.login-mode) .modal-content {
+            background: linear-gradient(160deg, rgba(24, 31, 58, .96), rgba(12, 16, 34, .96)); border-radius: 26px;
+            border: 1px solid rgba(255, 255, 255, .1); box-shadow: 0 40px 100px rgba(0, 0, 0, .6), 0 0 60px rgba(255, 60, 60, .08);
+        }
+        body:not(.login-mode) .modal-content h2 { background: linear-gradient(90deg, #ff5b5b, #ff9d6b); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+        body:not(.login-mode) ::-webkit-scrollbar { width: 9px; height: 9px; }
+        body:not(.login-mode) ::-webkit-scrollbar-thumb { background: rgba(255, 91, 91, .35); border-radius: 10px; }
+        body:not(.login-mode) ::-webkit-scrollbar-track { background: transparent; }
+        @media (max-width: 768px) { #wNet { opacity: .3; } body:not(.login-mode) .container { backdrop-filter: none; } }
     </style>
 </head>
 <body class="login-mode">
@@ -6314,6 +6389,60 @@ window.holdConfirm = function (message, opts) {
         ScrollTrigger.refresh();
     }
     window.addEventListener('load', function () { setTimeout(arm, 150); });
+})();
+</script>
+
+<script>
+/* ===== Wasla v6: حركات اللوحة (نفس روح اللوجن). آمنة: لو GSAP ماتحملش بتتجاهل ===== */
+(function () {
+    var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    var conn = navigator.connection || {};
+    var weak = (navigator.hardwareConcurrency && navigator.hardwareConcurrency <= 4) || (navigator.deviceMemory && navigator.deviceMemory <= 2) || conn.saveData;
+    var inApp = function () { return !document.body.classList.contains('login-mode') && !document.hidden; };
+
+    /* بقعة ضوء على الكروت: حدث واحد بيخدم كل الكروت (حتى اللي بتتضاف بعدين) */
+    if (window.matchMedia('(hover: hover)').matches) {
+        document.addEventListener('pointermove', function (e) {
+            var c = e.target.closest && e.target.closest('.stat-card, .card, .user-card, .ct-card');
+            if (!c) return;
+            var r = c.getBoundingClientRect();
+            c.style.setProperty('--mx', (e.clientX - r.left) + 'px'); c.style.setProperty('--my', (e.clientY - r.top) + 'px');
+        }, { passive: true });
+    }
+    if (reduce) return;
+
+    /* شريط تقدّم السكرول فوق */
+    var bar = document.createElement('div'); bar.id = 'wProg'; bar.setAttribute('aria-hidden', 'true'); document.body.appendChild(bar);
+    var setP = window.gsap ? gsap.quickSetter(bar, 'scaleX') : function (v) { bar.style.transform = 'scaleX(' + v + ')'; };
+    function prog() { var h = document.documentElement.scrollHeight - innerHeight; setP(h > 0 ? Math.min(1, Math.max(0, scrollY / h)) : 0); }
+    addEventListener('scroll', prog, { passive: true }); addEventListener('resize', prog);
+
+    /* خلفية الشبكة جوه اللوحة (أخف من اللوجن) */
+    if (weak || !window.gsap) return;
+    var cv = document.createElement('canvas'); cv.id = 'wNet'; cv.setAttribute('aria-hidden', 'true'); document.body.insertBefore(cv, document.body.firstChild);
+    var cx = cv.getContext('2d'), W = 0, H = 0, dpr = Math.min(devicePixelRatio || 1, 1.5), pts = [], m = { x: -999, y: -999 };
+    function size() {
+        W = innerWidth; H = innerHeight; cv.width = W * dpr; cv.height = H * dpr; cx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        var n = Math.min(55, Math.round(W * H / 26000)); pts = [];
+        for (var i = 0; i < n; i++) pts.push({ x: Math.random() * W, y: Math.random() * H, vx: (Math.random() - .5) * .25, vy: (Math.random() - .5) * .25 });
+    }
+    size(); addEventListener('resize', size);
+    addEventListener('pointermove', function (e) { m.x = e.clientX; m.y = e.clientY; }, { passive: true });
+    gsap.ticker.add(function () {
+        if (!inApp()) return;
+        cx.clearRect(0, 0, W, H);
+        for (var i = 0; i < pts.length; i++) {
+            var p = pts[i]; p.x += p.vx; p.y += p.vy;
+            if (p.x < 0 || p.x > W) p.vx *= -1; if (p.y < 0 || p.y > H) p.vy *= -1;
+            for (var j = i + 1; j < pts.length; j++) {
+                var q = pts[j], d = Math.hypot(p.x - q.x, p.y - q.y);
+                if (d < 140) { cx.strokeStyle = 'rgba(140,160,255,' + (.14 * (1 - d / 140)) + ')'; cx.beginPath(); cx.moveTo(p.x, p.y); cx.lineTo(q.x, q.y); cx.stroke(); }
+            }
+            var dm = Math.hypot(p.x - m.x, p.y - m.y);
+            if (dm < 170) { cx.strokeStyle = 'rgba(255,91,91,' + (.4 * (1 - dm / 170)) + ')'; cx.beginPath(); cx.moveTo(p.x, p.y); cx.lineTo(m.x, m.y); cx.stroke(); }
+            cx.fillStyle = dm < 170 ? 'rgba(255,120,120,.9)' : 'rgba(170,185,255,.6)'; cx.beginPath(); cx.arc(p.x, p.y, 1.6, 0, 6.283); cx.fill();
+        }
+    });
 })();
 </script>
 </body>
