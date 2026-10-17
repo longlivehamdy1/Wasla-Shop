@@ -9,6 +9,7 @@
     <link rel="apple-touch-icon" href="/apple-touch-icon.png">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <script>try{if(localStorage.getItem('wasla_theme')==='light')document.documentElement.classList.add('w-light')}catch(e){}</script>
+    <script>try{var _a=localStorage.getItem('wasla_accent');if(_a)document.documentElement.setAttribute('data-accent',_a)}catch(e){}</script>
     <!-- Chart.js للرسوم البيانية -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <!-- jsPDF للـ PDF -->
@@ -1727,9 +1728,82 @@
         html.w-light body:not(.login-mode) #dashboard div[style*="rgba(255, 60, 60,0.05)"] { background: rgba(255, 255, 255, .85) !important; border-color: rgba(30, 40, 90, .1) !important; box-shadow: 0 6px 20px rgba(60, 70, 130, .07); }
         html.w-light body:not(.login-mode) ::-webkit-scrollbar-thumb { background: rgba(179, 16, 17, .3); }
         html.w-light #wProg { background: linear-gradient(90deg, #b31011, #ff5b5b, #1a8cff); }
+
+        /* ============================================================ */
+        /* ===== Wasla v8: Splash + حالات فاضية + شارات + لون التطبيق + اختصارات ===== */
+        /* ============================================================ */
+        #wSplash { position: fixed; inset: 0; z-index: 99999; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; background: radial-gradient(700px circle at 50% 40%, rgba(255, 60, 60, .18), transparent 60%), #060913; animation: wSplashOut .5s ease 1.3s forwards; }
+        .wsp-ring { position: absolute; width: 190px; height: 190px; border-radius: 50%; background: conic-gradient(from 0deg, transparent 0 55%, #ff5b5b 80%, transparent); -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 3px)); mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 3px)); animation: wspSpin 1.1s linear infinite; }
+        .wsp-logo img { height: 64px; background: #fff; border-radius: 16px; padding: 7px 14px; box-shadow: 0 14px 40px rgba(255, 60, 60, .45); animation: wspPop .7s cubic-bezier(.2, 1.4, .4, 1) both; }
+        .wsp-name { color: #fff; font-size: 30px; font-weight: 900; letter-spacing: 2px; margin-top: 86px; animation: wspUp .6s ease .25s both; }
+        .wsp-tag { color: #8b96ba; font-size: 12px; font-style: italic; animation: wspUp .6s ease .4s both; }
+        .wsp-bar { width: 140px; height: 3px; background: rgba(255, 255, 255, .1); border-radius: 3px; overflow: hidden; margin-top: 10px; }
+        .wsp-bar i { display: block; height: 100%; width: 100%; background: linear-gradient(90deg, #ff5b5b, #ff9d6b); transform-origin: left; animation: wspBar 1.2s ease forwards; }
+        @keyframes wSplashOut { to { opacity: 0; visibility: hidden; pointer-events: none; } }
+        @keyframes wspSpin { to { transform: rotate(360deg); } }
+        @keyframes wspPop { from { opacity: 0; transform: scale(.5) rotate(-8deg); } }
+        @keyframes wspUp { from { opacity: 0; transform: translateY(14px); } }
+        @keyframes wspBar { from { transform: scaleX(0); } }
+        @media (prefers-reduced-motion: reduce) { #wSplash { display: none; } }
+
+        /* حالات فاضية */
+        .empty-state { position: relative; border: 1px dashed rgba(255, 255, 255, .16); border-radius: 18px; background: rgba(255, 255, 255, .03); padding: 40px 20px; line-height: 2; animation: wEmpty 3s ease-in-out infinite; }
+        @keyframes wEmpty { 50% { border-color: rgba(255, 91, 91, .4); } }
+        html.w-light .empty-state { border-color: rgba(30, 40, 90, .2); background: rgba(255, 255, 255, .6); color: #5b6486; }
+
+        /* شارات الحالة: نقطة + توهج بلون الحالة */
+        .status-badge { display: inline-flex; align-items: center; gap: 6px; }
+        .status-badge::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: #fff; opacity: .9; }
+        .status-pending { box-shadow: 0 0 14px rgba(243, 156, 18, .4); }
+        .status-cashier { box-shadow: 0 0 14px rgba(52, 152, 219, .4); }
+        .status-manager { box-shadow: 0 0 14px rgba(46, 204, 113, .4); }
+        .status-ready { box-shadow: 0 0 14px rgba(231, 76, 60, .5); }
+        .status-picked { box-shadow: 0 0 14px rgba(142, 68, 173, .4); }
+
+        /* ردود سريعة في الشات */
+        .w-qr { display: none; flex-wrap: wrap; gap: 6px; margin: 8px 0 4px; }
+        .w-qr button { border: 1px solid rgba(255, 255, 255, .15); background: rgba(255, 255, 255, .06); color: inherit; border-radius: 20px; padding: 5px 12px; font-size: 12px; cursor: pointer; transition: .2s; }
+        .w-qr button:hover { border-color: #ff5b5b; background: rgba(255, 91, 91, .14); transform: translateY(-1px); }
+        html.w-light .w-qr button { border-color: rgba(30, 40, 90, .18); background: #fff; color: #2b3350; }
+
+        /* اختصارات الكيبورد */
+        .w-sc-ov { position: fixed; inset: 0; z-index: 5000; display: flex; align-items: center; justify-content: center; background: rgba(3, 5, 12, .7); backdrop-filter: blur(8px); padding: 16px; animation: wScIn .2s ease; }
+        .w-sc { width: 100%; max-width: 440px; border-radius: 22px; padding: 26px; background: linear-gradient(160deg, rgba(24, 31, 58, .97), rgba(12, 16, 34, .97)); border: 1px solid rgba(255, 255, 255, .1); box-shadow: 0 40px 100px rgba(0, 0, 0, .6); color: #ccd6f6; }
+        .w-sc h3 { color: #ff7a7a; margin-bottom: 14px; }
+        .w-sc div { display: flex; justify-content: space-between; align-items: center; padding: 9px 0; border-bottom: 1px solid rgba(255, 255, 255, .07); font-size: 14px; }
+        .w-sc kbd { background: rgba(255, 255, 255, .1); border: 1px solid rgba(255, 255, 255, .2); border-radius: 7px; padding: 2px 9px; font-family: inherit; font-size: 12px; color: #fff; }
+        @keyframes wScIn { from { opacity: 0; transform: scale(.97); } }
+        html.w-light .w-sc-ov { background: rgba(25, 30, 60, .45); }
+        html.w-light .w-sc { background: #fff; color: #2b3350; border-color: rgba(30, 40, 90, .1); }
+        html.w-light .w-sc kbd { color: #1f2440; background: #eef1fa; border-color: rgba(30, 40, 90, .2); }
+
+        /* لون التطبيق */
+        .w-acc-row { display: flex; gap: 12px; margin-top: 10px; }
+        .w-acc { width: 38px; height: 38px; border-radius: 50%; border: 3px solid transparent; background: var(--c); cursor: pointer; box-shadow: 0 6px 16px rgba(0, 0, 0, .3); transition: transform .2s, border-color .2s; }
+        .w-acc:hover { transform: scale(1.12); }
+        .w-acc.on { border-color: #fff; box-shadow: 0 0 0 2px var(--c), 0 6px 16px rgba(0, 0, 0, .3); }
+        html.w-light .w-acc.on { border-color: #fff; }
+        html[data-accent="blue"]   { --ac1: #4da3ff; --ac2: #0b5ed7; --acrgb: 77, 163, 255; }
+        html[data-accent="green"]  { --ac1: #2ecc71; --ac2: #1e9e57; --acrgb: 46, 204, 113; }
+        html[data-accent="purple"] { --ac1: #b07cff; --ac2: #6c3483; --acrgb: 176, 124, 255; }
+        html[data-accent="orange"] { --ac1: #ffa94d; --ac2: #e67e22; --acrgb: 255, 169, 77; }
+        html[data-accent] .header h1, html[data-accent] .stat-card .number, html[data-accent] .modal-content h2, html[data-accent] .btn:not([class*="btn-"]) { background-image: linear-gradient(90deg, var(--ac1), var(--ac2)) !important; }
+        html[data-accent] .header::after, html[data-accent] #wProg { background: linear-gradient(90deg, transparent, var(--ac1), transparent) !important; }
+        html[data-accent] #wProg { background: linear-gradient(90deg, var(--ac2), var(--ac1)) !important; }
+        html[data-accent] .btn:not([class*="btn-"]) { background: linear-gradient(90deg, var(--ac1), var(--ac2)) !important; }
+        html[data-accent] .card h3, html[data-accent] th, html[data-accent] [style*="color:#ff5b5b"], html[data-accent] .btn-outline, html[data-accent] .manager-tabs .tab-btn.active { color: var(--ac1) !important; }
+        html[data-accent] .btn-outline { border-color: var(--ac1) !important; }
+        html[data-accent] .manager-tabs .tab-btn.active { background: rgba(var(--acrgb), .16) !important; box-shadow: 0 0 22px rgba(var(--acrgb), .2), inset 0 0 0 1px rgba(var(--acrgb), .3) !important; }
+        html[data-accent] .progress-bar .fill { background: linear-gradient(90deg, var(--ac1), var(--ac2)) !important; }
+        html[data-accent] .stat-card:hover, html[data-accent] .card:hover { border-color: rgba(var(--acrgb), .55) !important; box-shadow: 0 14px 34px rgba(var(--acrgb), .16) !important; }
+        html[data-accent] .stat-card::before, html[data-accent] .card::before, html[data-accent] .user-card::before, html[data-accent] .ct-card::before { background: radial-gradient(220px circle at var(--mx) var(--my), rgba(var(--acrgb), .2), transparent 65%) !important; }
+        html[data-accent] #dashboard input:focus, html[data-accent] #dashboard select:focus, html[data-accent] .modal-content input:focus, html[data-accent] .modal-content select:focus, html[data-accent] .modal-content textarea:focus { border-color: var(--ac1) !important; box-shadow: 0 0 0 4px rgba(var(--acrgb), .16) !important; }
+        html[data-accent] .table-responsive tbody tr:hover { box-shadow: inset -3px 0 0 var(--ac1) !important; background: rgba(var(--acrgb), .07) !important; }
     </style>
 </head>
 <body class="login-mode">
+<div id="wSplash" aria-hidden="true"><div class="wsp-ring"></div><div class="wsp-logo" id="wspLogo"></div><div class="wsp-name">Wasla</div><div class="wsp-tag">connect with your life</div><div class="wsp-bar"><i></i></div></div>
+<script>try{if(sessionStorage.getItem('wsp')){var _s=document.getElementById('wSplash');if(_s)_s.remove()}else sessionStorage.setItem('wsp','1')}catch(e){}</script>
 
 <div class="container" id="app">
     <!-- الهيدر -->
@@ -2072,6 +2146,18 @@
                     <label class="om-l">تنبيه لو الجهاز بقاله في الصيانة أكتر من (يوم)</label><input type="number" id="mSetLate" min="1">
                     <label class="om-l">تنبيه لو الجهاز جاهز ولم يُستلم من (يوم)</label><input type="number" id="mSetPickup" min="1">
                     <button class="btn btn-success" onclick="saveShopRules()">💾 حفظ</button>
+                </div>
+
+                <div style="margin:15px 0;background:rgba(255, 60, 60,0.05);padding:15px;border-radius:12px;border:1px solid rgba(255, 60, 60,0.1);">
+                    <h3 style="color:#ff5b5b;">🎨 لون التطبيق</h3>
+                    <p style="font-size:12px;color:#8892b0;margin:6px 0;">اختيار شخصي على جهازك بس.</p>
+                    <div class="w-acc-row" id="wAccRow">
+                        <button type="button" class="w-acc" data-a="" style="--c:#ff5b5b" title="أحمر"></button>
+                        <button type="button" class="w-acc" data-a="blue" style="--c:#4da3ff" title="أزرق"></button>
+                        <button type="button" class="w-acc" data-a="green" style="--c:#2ecc71" title="أخضر"></button>
+                        <button type="button" class="w-acc" data-a="purple" style="--c:#b07cff" title="بنفسجي"></button>
+                        <button type="button" class="w-acc" data-a="orange" style="--c:#ffa94d" title="برتقالي"></button>
+                    </div>
                 </div>
 
                 <div style="margin:15px 0;background:rgba(255, 60, 60,0.05);padding:15px;border-radius:12px;border:1px solid rgba(255, 60, 60,0.1);">
@@ -6530,6 +6616,68 @@ window.holdConfirm = function (message, opts) {
         e.preventDefault(); lock = true; setTimeout(function () { lock = false; }, 900);
         fn();
     }, true);
+})();
+</script>
+
+<script>
+/* ===== Wasla v8: لوجو الـ Splash، لون التطبيق، ردود سريعة، اختصارات، رابط تتبع مباشر ===== */
+(function () {
+    var $ = function (id) { return document.getElementById(id); };
+
+    /* لوجو الـ Splash */
+    var src = document.querySelector('.brand-logo'), sp = $('wspLogo');
+    if (src && sp) { var im = src.cloneNode(); im.className = ''; sp.appendChild(im); }
+
+    /* لون التطبيق */
+    var row = $('wAccRow');
+    function markAcc() { var cur = document.documentElement.getAttribute('data-accent') || ''; if (row) row.querySelectorAll('.w-acc').forEach(function (b) { b.classList.toggle('on', b.dataset.a === cur); }); }
+    if (row) row.addEventListener('click', function (e) {
+        var b = e.target.closest('.w-acc'); if (!b) return;
+        if (b.dataset.a) document.documentElement.setAttribute('data-accent', b.dataset.a); else document.documentElement.removeAttribute('data-accent');
+        try { if (b.dataset.a) localStorage.setItem('wasla_accent', b.dataset.a); else localStorage.removeItem('wasla_accent'); } catch (x) {}
+        markAcc();
+    });
+    markAcc();
+
+    /* ردود سريعة في الشات (للموظفين بس) */
+    var inp = $('chatInput');
+    if (inp && inp.parentNode) {
+        var qr = document.createElement('div'); qr.className = 'w-qr'; qr.id = 'wQr';
+        ['جهازك جاهز للاستلام ✅', 'بدأنا الصيانة 🛠️', 'محتاجين موافقتك على عرض السعر', 'ممكن توصّلنا برقم موبايل تاني؟', 'تم، شكرًا لصبرك 🙏'].forEach(function (t) {
+            var b = document.createElement('button'); b.type = 'button'; b.textContent = t;
+            b.addEventListener('click', function () { inp.value = (inp.value ? inp.value + ' ' : '') + t; inp.focus(); });
+            qr.appendChild(b);
+        });
+        inp.parentNode.parentNode.insertBefore(qr, inp.parentNode);
+        document.addEventListener('focusin', function (e) {
+            if (e.target !== inp) return;
+            var isClient = (typeof currentUser !== 'undefined' && currentUser && currentUser.role === 'client');
+            qr.style.display = isClient ? 'none' : 'flex';
+        });
+    }
+
+    /* اختصارات الكيبورد: اضغط ? */
+    document.addEventListener('keydown', function (e) {
+        if (e.key !== '?' || document.body.classList.contains('login-mode')) return;
+        var t = e.target; if (t && (/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName) || t.isContentEditable)) return;
+        if ($('wSc')) return; e.preventDefault();
+        var ov = document.createElement('div'); ov.className = 'w-sc-ov'; ov.id = 'wSc';
+        ov.innerHTML = '<div class="w-sc" role="dialog" aria-label="اختصارات الكيبورد"><h3>⌨️ اختصارات الكيبورد</h3>' +
+            [['بحث سريع في الطلبات', '<kbd>Ctrl</kbd> + <kbd>K</kbd> أو <kbd>/</kbd>'], ['تبويبات المدير', '<kbd>1</kbd> … <kbd>9</kbd>'], ['إغلاق أي نافذة', '<kbd>Esc</kbd>'], ['تسجيل الدخول', '<kbd>Enter</kbd>'], ['إظهار هذه القائمة', '<kbd>?</kbd>']].map(function (r) { return '<div><span>' + r[0] + '</span><span>' + r[1] + '</span></div>'; }).join('') + '</div>';
+        function close() { document.removeEventListener('keydown', k, true); ov.remove(); }
+        function k(ev) { if (ev.key === 'Escape' || ev.key === 'Enter') { ev.preventDefault(); close(); } }
+        document.addEventListener('keydown', k, true);
+        ov.addEventListener('pointerdown', function (ev) { if (ev.target === ov) close(); });
+        document.body.appendChild(ov);
+    });
+
+    /* رابط تتبع مباشر: /track/رقم_الوصل */
+    var _o = window.onAppReady;
+    window.onAppReady = function () {
+        if (typeof _o === 'function') _o.apply(this, arguments);
+        var m = location.pathname.match(/^\/track\/([^\/]+)/);
+        if (m && typeof openTrackModal === 'function') openTrackModal(decodeURIComponent(m[1]));
+    };
 })();
 </script>
 </body>

@@ -25,5 +25,11 @@
         }
       ]
     }
+  ],
+  "rewrites": [
+    {
+      "source": "/track/:id",
+      "destination": "/index.html"
+    }
   ]
 }
