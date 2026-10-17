@@ -14,6 +14,78 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <!-- jsQR لمسح وقراءة QR Code بالكاميرا -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jsqr/1.4.0/jsQR.js"></script>
+    <!-- Lenis: سكرول ناعم -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/lenis@1.3.26/dist/lenis.css">
+    <script src="https://cdn.jsdelivr.net/npm/lenis@1.3.26/dist/lenis.min.js"></script>
+    <!-- GSAP: حركات الواجهة -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.4/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.4/ScrollTrigger.min.js"></script>
+    <style>
+        /* GSAP بيتولى الحركة بدل CSS عشان ميحصلش تضارب */
+        html.gsap-on .tab-content.active { animation: none; }
+        html.gsap-on .stats-advanced .stat-card,
+        html.gsap-on .cards .card,
+        html.gsap-on .users-grid .user-card { animation: none; }
+        html.gsap-on #loginScreen, html.gsap-on #dashboard { animation: none; }
+        html.gsap-on .toast { animation: none; }
+        /* لمعة تتبع المؤشر (Glare Hover) على الكروت */
+        html.gsap-on .stat-card, html.gsap-on .card, html.gsap-on .user-card { position: relative; }
+        html.gsap-on .stat-card::after, html.gsap-on .card::after, html.gsap-on .user-card::after {
+            content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+            background: radial-gradient(220px circle at var(--gx, 50%) var(--gy, 50%), rgba(255,255,255,0.10), transparent 70%);
+            opacity: 0; transition: opacity 0.25s ease;
+        }
+        html.gsap-on .stat-card.glare::after, html.gsap-on .card.glare::after, html.gsap-on .user-card.glare::after { opacity: 1; }
+
+        /* ===== مؤشر مراحل مصغّر في جدول الطلبات ===== */
+        .mini-steps { display:flex; gap:3px; margin-top:6px; justify-content:center; }
+        .mini-steps i { width:14px; height:4px; border-radius:3px; background:rgba(255,255,255,0.12); display:block; }
+        .mini-steps i.done { background:#2ecc71; }
+        .mini-steps i.current { background:#f39c12; }
+
+        /* ===== خط توصيل الـ Stepper بيترسم بالتدريج ===== */
+        html.gsap-on .ct-step::before { transform: scaleX(var(--lp, 1)); transform-origin: right center; }
+
+        /* ===== Hold Button: ضغط مطوّل للتأكيد ===== */
+        .w-hold-ov { position:fixed; inset:0; background:rgba(0,0,0,0.8); backdrop-filter:blur(5px); z-index:10050; display:flex; align-items:center; justify-content:center; padding:16px; }
+        .w-hold-box { background:#1a1f35; border:1px solid rgba(255,255,255,0.12); border-radius:20px; padding:26px; max-width:420px; width:100%; text-align:center; box-shadow:0 20px 60px rgba(0,0,0,0.6); }
+        .w-hold-box p { line-height:1.8; margin-bottom:18px; font-size:15px; }
+        .w-hold-btn { position:relative; overflow:hidden; width:100%; padding:14px; border:2px solid #ff5b5b; border-radius:12px; background:rgba(255,91,91,0.12); color:#fff; font-size:15px; font-weight:bold; cursor:pointer; user-select:none; -webkit-user-select:none; touch-action:none; }
+        .w-hold-btn .w-fill { position:absolute; inset:0; background:#e74c3c; transform:scaleX(0); transform-origin:right center; }
+        .w-hold-btn span { position:relative; z-index:1; }
+        .w-hold-cancel { margin-top:10px; width:100%; padding:11px; border:none; border-radius:12px; background:rgba(255,255,255,0.08); color:#ccd6f6; cursor:pointer; font-size:14px; }
+        .w-hold-hint { font-size:12px; color:#8892b0; margin-top:8px; }
+
+        /* ===== إشعارات بالسحب ===== */
+        .toast { touch-action: pan-y; cursor: grab; }
+
+        /* ===== خلفية Aurora لشاشة الدخول ===== */
+        .w-aurora { position:fixed; inset:0; z-index:-1; overflow:hidden; pointer-events:none; }
+        .w-aurora i { position:absolute; border-radius:50%; filter:blur(70px); opacity:0.45; will-change:transform; }
+        .w-aurora i:nth-child(1) { width:46vmax; height:46vmax; background:radial-gradient(circle,#ff3c3c,transparent 65%); top:-14vmax; right:-10vmax; }
+        .w-aurora i:nth-child(2) { width:40vmax; height:40vmax; background:radial-gradient(circle,#1a8cff,transparent 65%); bottom:-12vmax; left:-8vmax; }
+        .w-aurora i:nth-child(3) { width:30vmax; height:30vmax; background:radial-gradient(circle,#8e44ad,transparent 65%); top:35%; left:35%; opacity:0.3; }
+
+        /* ===== جملة الترحيب ===== */
+        .w-welcome { margin-top:4px; font-size:13px; color:#ccd6f6; min-height:18px; }
+        .w-welcome::after { content:'|'; margin-inline-start:2px; opacity:0.7; animation: wBlink 0.8s steps(1) infinite; }
+        .w-welcome.done::after { display:none; }
+        @keyframes wBlink { 50% { opacity:0; } }
+
+        /* ===== شريط التنقل السفلي (Dock) للموبايل ===== */
+        #wDock { display:none; }
+        @media (max-width: 700px) {
+            body.has-dock { padding-bottom: 92px; }
+            body.has-dock .chat-float-btn { bottom: 96px; }
+            #wDock { position:fixed; left:10px; right:10px; bottom:10px; z-index:950; display:none; justify-content:space-around; align-items:center;
+                background:rgba(26,31,53,0.92); backdrop-filter:blur(14px); border:1px solid rgba(255,255,255,0.12); border-radius:22px; padding:8px 6px; box-shadow:0 10px 30px rgba(0,0,0,0.5); }
+            body.has-dock #wDock { display:flex; }
+            #wDock button { position:relative; z-index:1; flex:1; background:none; border:none; color:#8892b0; display:flex; flex-direction:column; align-items:center; gap:2px; font-size:10px; padding:4px 0; cursor:pointer; }
+            #wDock button .ic { font-size:20px; line-height:1; }
+            #wDock button.active { color:#fff; }
+            #wDock .w-pill { position:absolute; z-index:0; top:6px; bottom:6px; border-radius:16px; background:rgba(255,60,60,0.22); pointer-events:none; }
+        }
+    </style>
     <style>
         * {
             margin: 0;
@@ -2184,8 +2256,12 @@
         const el = document.getElementById(elementId);
         if (!el) return;
         const newText = String(newValue);
-        if (el.textContent === newText) return;
-        el.textContent = newText;
+        if (el.textContent === newText || el.dataset.wto === newText) return;
+        if (window.waslaCount && /^\d{1,9}$/.test(el.textContent) && /^\d{1,9}$/.test(newText)) {
+            window.waslaCount(el, parseInt(el.textContent, 10), parseInt(newText, 10));
+        } else {
+            el.textContent = newText;
+        }
         el.classList.remove('bump');
         void el.offsetWidth; // إعادة تشغيل الحركة حتى لو كانت شغالة قبل كده
         el.classList.add('bump');
@@ -2379,8 +2455,8 @@
         loadManagerLogs();
     }
 
-    function clearLogs() {
-        if (!confirm('⚠️ هل أنت متأكد من مسح سجل النشاطات؟')) return;
+    async function clearLogs() {
+        if (!(await holdConfirm('⚠️ هل أنت متأكد من مسح سجل النشاطات؟'))) return;
         const data = getData();
         data.logs = [];
         saveData(data);
@@ -2463,8 +2539,7 @@
 
     // ====== إعدادات النظام ======
     async function resetSystem() {
-        if (!confirm('⚠️ هل أنت متأكد من إعادة ضبط النظام؟ سيتم حذف جميع البيانات!')) return;
-        if (!confirm('⚠️ تأكيد نهائي؟ هذه العملية لا يمكن التراجع عنها! (بيتعمل نسخة احتياطية تلقائية يوميًا لو احتجت ترجع)')) return;
+        if (!(await holdConfirm('⚠️ هل أنت متأكد من إعادة ضبط النظام؟ سيتم حذف جميع البيانات! هذه العملية لا يمكن التراجع عنها (بيتعمل نسخة احتياطية تلقائية يوميًا لو احتجت ترجع).', { ms: 2200 }))) return;
         await api('POST', '/api/backups/now');
         const r = await api('POST', '/api/reset');
         if (!r.ok) { showToast('❌ فشل إعادة الضبط', 'error'); return; }
@@ -2497,7 +2572,7 @@
         reader.onload = async function(e) {
             try {
                 const data = JSON.parse(e.target.result);
-                if (!confirm('⚠️ الاستيراد هيستبدل كل البيانات الحالية. متأكد؟')) return;
+                if (!(await holdConfirm('⚠️ الاستيراد هيستبدل كل البيانات الحالية. متأكد؟', { ms: 1600 }))) return;
                 await api('POST', '/api/backups/now');
                 const r = await api('POST', '/api/import', data);
                 if (!r.ok) throw new Error((r.data && r.data.error) || 'فشل');
@@ -2529,7 +2604,7 @@
         loadBackups();
     }
     async function restoreBackup(name) {
-        if (!confirm(`⚠️ استرجاع نسخة ${name.replace('.json','')} هيستبدل كل البيانات الحالية. متأكد؟`)) return;
+        if (!(await holdConfirm(`⚠️ استرجاع نسخة ${name.replace('.json','')} هيستبدل كل البيانات الحالية. متأكد؟`, { ms: 1600 }))) return;
         await api('POST', '/api/backups/now');
         const r = await api('POST', '/api/restore', { name });
         if (!r.ok) { showToast('❌ فشل الاسترجاع', 'error'); return; }
@@ -3415,12 +3490,12 @@
         addLog(`غيّر ${currentUser.username} كلمة مرور ${username}`);
     }
 
-    function deleteUserV2(username) {
+    async function deleteUserV2(username) {
         if (username === 'manager') {
             showToast('❌ لا يمكن حذف المدير الأساسي', 'error');
             return;
         }
-        if (!confirm('⚠️ هل أنت متأكد من حذف المستخدم "' + username + '"؟')) return;
+        if (!(await holdConfirm('⚠️ هل أنت متأكد من حذف المستخدم "' + username + '"؟'))) return;
         const data = getData();
         data.users = data.users.filter(u => u.username !== username);
         saveData(data);
@@ -4177,7 +4252,7 @@ ${i+1}. المعرف: ${r.id}
                         </div>
                     </div>
                 </td>
-                <td><span class="status-badge ${status.class}">${status.text}</span>${techTag(r)}${moneyTag(r)}${notifiedTag(r)}</td>
+                <td><span class="status-badge ${status.class}">${status.text}</span>${miniSteps(r)}${techTag(r)}${moneyTag(r)}${notifiedTag(r)}</td>
                 ${role !== 'client' ? `<td style="font-size:12px;max-width:150px;word-break:break-word;">${r.deviceDetails || '-'}</td>` : ''}
                 ${role === 'client' ? `<td style="font-size:12px;">${r.createdAt}</td>` : ''}
                 <td><div style="display:flex;gap:4px;flex-wrap:wrap;justify-content:center;">${imagesHtml}</div></td>
@@ -5154,8 +5229,8 @@ ${o.notice ? `<div class="note">${esc(o.notice)}</div>` : ''}
         p[field] = field === 'name' ? el.value.trim() : Math.max(0, Number(el.value) || 0);
         saveData(data); updateAlertsBadge();
     }
-    function deletePart(id) {
-        if (!confirm('🗑️ حذف القطعة؟')) return;
+    async function deletePart(id) {
+        if (!(await holdConfirm('🗑️ حذف القطعة؟'))) return;
         const data = getData(); data.parts = (data.parts || []).filter(x => x.id !== id);
         saveData(data); renderManagerParts();
     }
@@ -5243,6 +5318,402 @@ ${o.notice ? `<div class="note">${esc(o.notice)}</div>` : ''}
             }
         }, 10000);
     };
+</script>
+
+<script>
+/* ===== أدوات عامة: ضغط مطوّل للتأكيد + مؤشر مراحل مصغّر ===== */
+window.miniSteps = function (r) {
+    var order = ['pending', 'cashier_received', 'manager_accepted', 'ready_for_pickup', 'picked_up'];
+    var idx = order.indexOf(r && r.status); if (idx < 0) idx = 0;
+    var h = '<div class="mini-steps" title="مراحل الطلب">';
+    for (var i = 0; i < order.length; i++) h += '<i class="' + (i < idx ? 'done' : (i === idx ? (idx === order.length - 1 ? 'done' : 'current') : '')) + '"></i>';
+    return h + '</div>';
+};
+window.holdConfirm = function (message, opts) {
+    var ms = (opts && opts.ms) || 1200;
+    return new Promise(function (resolve) {
+        var ov = document.createElement('div');
+        ov.className = 'w-hold-ov';
+        ov.setAttribute('role', 'alertdialog');
+        ov.innerHTML = '<div class="w-hold-box"><p></p><button type="button" class="w-hold-btn"><div class="w-fill"></div><span>🗑️ اضغط مطوّلاً للتأكيد</span></button><div class="w-hold-hint">استمر في الضغط لحد ما الشريط يتملّى</div><button type="button" class="w-hold-cancel">إلغاء</button></div>';
+        ov.querySelector('p').textContent = message;
+        document.body.appendChild(ov);
+        var btn = ov.querySelector('.w-hold-btn'), fill = ov.querySelector('.w-fill'), cancel = ov.querySelector('.w-hold-cancel');
+        var raf = 0, t0 = 0, finished = false;
+        function done(v) {
+            if (finished) return; finished = true;
+            cancelAnimationFrame(raf);
+            document.removeEventListener('keydown', onKey); document.removeEventListener('keyup', onKeyUp);
+            ov.remove(); resolve(v);
+        }
+        function tick(now) {
+            var p = Math.min(1, (now - t0) / ms);
+            fill.style.transform = 'scaleX(' + p + ')';
+            if (p >= 1) { done(true); return; }
+            raf = requestAnimationFrame(tick);
+        }
+        function start() { if (finished || t0) return; t0 = performance.now(); raf = requestAnimationFrame(tick); }
+        function stop() { if (finished) return; cancelAnimationFrame(raf); t0 = 0; fill.style.transition = 'transform .25s'; fill.style.transform = 'scaleX(0)'; setTimeout(function () { fill.style.transition = ''; }, 260); }
+        btn.addEventListener('pointerdown', function (e) { e.preventDefault(); start(); });
+        ['pointerup', 'pointerleave', 'pointercancel'].forEach(function (ev) { btn.addEventListener(ev, stop); });
+        function onKey(e) { if (e.key === 'Escape') done(false); else if ((e.key === ' ' || e.key === 'Enter') && document.activeElement === btn) { e.preventDefault(); if (!e.repeat) start(); } }
+        function onKeyUp(e) { if (e.key === ' ' || e.key === 'Enter') stop(); }
+        document.addEventListener('keydown', onKey); document.addEventListener('keyup', onKeyUp);
+        cancel.addEventListener('click', function () { done(false); });
+        ov.addEventListener('pointerdown', function (e) { if (e.target === ov) done(false); });
+        cancel.focus();
+    });
+};
+</script>
+
+<script>
+/* ===== Wasla motion: GSAP + Lenis (آمن: لو المكتبات ماتحملتش الموقع يشتغل عادي) ===== */
+(function () {
+    if (!window.gsap) return;
+    var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (reduce) return;
+    document.documentElement.classList.add('gsap-on');
+
+    /* 1) سكرول ناعم للصفحة، والمودالات والقوائم الداخلية بتسكرول عادي */
+    var lenis = null;
+    if (window.Lenis) {
+        lenis = new Lenis({
+            lerp: 0.1,
+            allowNestedScroll: true,
+            prevent: function (node) {
+                return node.closest && node.closest('.modal, #imageLightbox, #loadingOverlay');
+            }
+        });
+        if (window.ScrollTrigger) { gsap.registerPlugin(ScrollTrigger); lenis.on('scroll', ScrollTrigger.update); }
+        gsap.ticker.add(function (t) { lenis.raf(t * 1000); });
+        gsap.ticker.lagSmoothing(0);
+    }
+
+    if (!lenis && window.ScrollTrigger) gsap.registerPlugin(ScrollTrigger);
+    if (window.Chart && Chart.defaults) { Chart.defaults.animation = { duration: 900, easing: 'easeOutQuart' }; }
+    function visible(el) { return el && el.offsetParent !== null; }
+
+    /* 2) عدّاد الأرقام: بيعد من قيمة لقيمة (بيتستخدم عند فتح التبويب وعند تغيّر الرقم فعلاً) */
+    window.waslaCount = function (el, from, to) {
+        if (el._wtw) el._wtw.kill();
+        var o = { v: from };
+        el.dataset.wto = String(to);
+        el._wtw = gsap.to(o, {
+            v: to, duration: 0.8, ease: 'power2.out',
+            onUpdate: function () { el.textContent = Math.round(o.v); },
+            onComplete: function () { el.textContent = String(to); delete el.dataset.wto; el._wtw = null; }
+        });
+    };
+    function countUp(el) {
+        var raw = el.textContent.trim();
+        if (!/^\d{1,9}$/.test(raw)) return;
+        var target = parseInt(raw, 10);
+        if (target < 2) return;
+        el.textContent = '0';
+        window.waslaCount(el, 0, target);
+    }
+
+    /* عدّاد لنص فيه رقم (فلوس/أيام) زي "1,250 ج.م" */
+    function countText(el) {
+        var t = el.textContent, m = t.match(/\d[\d,]*(\.\d+)?/);
+        if (!m) return;
+        var num = parseFloat(m[0].replace(/,/g, ''));
+        if (!isFinite(num) || num === 0) return;
+        var dec = m[1] ? m[1].length - 1 : 0, comma = m[0].indexOf(',') > -1;
+        var pre = t.slice(0, m.index), post = t.slice(m.index + m[0].length);
+        var o = { v: 0 };
+        gsap.to(o, { v: num, duration: 0.9, ease: 'power2.out',
+            onUpdate: function () { var x = o.v.toFixed(dec); if (comma) x = Number(x).toLocaleString('en-US', { minimumFractionDigits: dec, maximumFractionDigits: dec }); el.textContent = pre + x + post; },
+            onComplete: function () { el.textContent = t; } });
+    }
+
+    /* قدرات الرسوم/التقارير: رسم تدريجي + ظهور الصفوف مع السكرول (ScrollTrigger) */
+    var reportTriggers = [], lastReportAnim = 0;
+    function animateReports(box) {
+        if (!box || !box.firstElementChild) return;
+        var now = Date.now(); if (now - lastReportAnim < 400) return; lastReportAnim = now;
+        reportTriggers.forEach(function (t) { t.kill(); }); reportTriggers = [];
+        var sum = box.querySelectorAll('.ct-summary .it');
+        if (sum.length) gsap.fromTo(sum, { y: 16, opacity: 0 }, { y: 0, opacity: 1, duration: 0.45, ease: 'power2.out', stagger: 0.06, clearProps: 'transform,opacity' });
+        box.querySelectorAll('.ct-summary .it b').forEach(countText);
+        var bars = box.querySelectorAll('.bar-f');
+        if (bars.length) gsap.from(bars, { height: 0, duration: 0.7, ease: 'power3.out', stagger: 0.03 });
+        var fills = box.querySelectorAll('.al-row .bar > div');
+        if (fills.length) gsap.from(fills, { width: 0, duration: 0.8, ease: 'power2.out', stagger: 0.08 });
+        if (window.ScrollTrigger) {
+            var rows = box.querySelectorAll('tbody tr');
+            if (rows.length) {
+                gsap.set(rows, { opacity: 0, y: 14 });
+                reportTriggers = ScrollTrigger.batch(rows, {
+                    start: 'top 94%', once: true,
+                    onEnter: function (b) { gsap.to(b, { opacity: 1, y: 0, duration: 0.45, stagger: 0.06, ease: 'power2.out', overwrite: true, clearProps: 'transform,opacity' }); }
+                });
+                requestAnimationFrame(function () { ScrollTrigger.refresh(); });
+                /* شبكة أمان: لو فيه صف فضل مخفي لأي سبب نظهره */
+                setTimeout(function () { rows.forEach(function (r) { if (!r.isConnected) return; if (parseFloat(getComputedStyle(r).opacity) === 0 && r.getBoundingClientRect().top < innerHeight) gsap.set(r, { opacity: 1, y: 0, clearProps: 'transform,opacity' }); }); }, 1800);
+            }
+        }
+    }
+
+    /* 3) دخول التبويب: الكروت بالتتابع + العدّادات */
+    function animateTab(tab) {
+        if (!tab) return;
+        var items = tab.querySelectorAll('.stat-card, .cards .card, .user-card');
+        if (items.length) {
+            gsap.fromTo(items.length > 40 ? Array.prototype.slice.call(items, 0, 40) : items,
+                { y: 18, opacity: 0 },
+                { y: 0, opacity: 1, duration: 0.45, ease: 'power2.out', stagger: 0.04, clearProps: 'transform,opacity' });
+        }
+        tab.querySelectorAll('.stat-card .number').forEach(countUp);
+        if (tab.id === 'manager-reports') animateReports(tab.querySelector('#mReportsBox'));
+        if (tab.id === 'manager-dashboard') {
+            try { if (managerStatusChart) { managerStatusChart.reset(); managerStatusChart.update(); } } catch (e) {}
+            try { if (managerProgressChart) { managerProgressChart.reset(); managerProgressChart.update(); } } catch (e) {}
+        }
+    }
+
+    var tabObs = new MutationObserver(function (muts) {
+        muts.forEach(function (m) {
+            var el = m.target;
+            if (el.classList.contains('tab-content') && el.classList.contains('active') &&
+                !(m.oldValue || '').split(' ').includes('active')) {
+                animateTab(el);
+            }
+        });
+    });
+    document.querySelectorAll('.tab-content').forEach(function (t) {
+        tabObs.observe(t, { attributes: true, attributeFilter: ['class'], attributeOldValue: true });
+    });
+
+    /* 4) المودالات: ظهور بنطّة خفيفة وتوقيف سكرول الصفحة وقت فتحها */
+    function syncLenisWithModals() {
+        if (!lenis) return;
+        var open = document.querySelector('.modal.active');
+        if (open) lenis.stop(); else lenis.start();
+    }
+    var modalObs = new MutationObserver(function (muts) {
+        muts.forEach(function (m) {
+            var el = m.target;
+            if (!el.classList.contains('active')) return;
+            if ((m.oldValue || '').split(' ').includes('active')) return;
+            var box = el.querySelector('.modal-content');
+            gsap.fromTo(el, { opacity: 0 }, { opacity: 1, duration: 0.2, ease: 'none', clearProps: 'opacity' });
+            if (box) gsap.fromTo(box, { y: 24, scale: 0.96, opacity: 0 },
+                { y: 0, scale: 1, opacity: 1, duration: 0.35, ease: 'back.out(1.4)', clearProps: 'transform,opacity' });
+        });
+        syncLenisWithModals();
+    });
+    document.querySelectorAll('.modal').forEach(function (m) {
+        modalObs.observe(m, { attributes: true, attributeFilter: ['class'], attributeOldValue: true });
+    });
+
+    /* 5) شاشة الدخول ولوحة التحكم: ظهور مرتب أول ما تتفتح */
+    function watchScreen(id, fn) {
+        var el = document.getElementById(id);
+        if (!el) return;
+        var was = visible(el);
+        new MutationObserver(function () {
+            var now = visible(el);
+            if (now && !was) fn(el);
+            was = now;
+        }).observe(el, { attributes: true, attributeFilter: ['style'] });
+        if (was) fn(el);
+    }
+    watchScreen('loginScreen', function (el) {
+        var box = el.querySelector('.login-box');
+        gsap.fromTo(el, { opacity: 0 }, { opacity: 1, duration: 0.4, clearProps: 'opacity' });
+        if (box) gsap.fromTo(box, { y: 30, opacity: 0 }, { y: 0, opacity: 1, duration: 0.6, ease: 'power3.out', delay: 0.1, clearProps: 'transform,opacity' });
+    });
+    watchScreen('dashboard', function (el) {
+        gsap.fromTo(el, { opacity: 0 }, { opacity: 1, duration: 0.4, clearProps: 'opacity' });
+        var head = el.querySelector('.header');
+        if (head) gsap.fromTo(head, { y: -16, opacity: 0 }, { y: 0, opacity: 1, duration: 0.5, ease: 'power2.out', clearProps: 'transform,opacity' });
+        animateTab(el.querySelector('.tab-content.active'));
+    });
+
+    /* 6) ضغطة الأزرار: ردّ فعل صغير عند اللمس */
+    document.addEventListener('pointerdown', function (e) {
+        var b = e.target.closest && e.target.closest('button, .tab-btn, .btn');
+        if (!b || b.disabled) return;
+        gsap.fromTo(b, { scale: 0.96 }, { scale: 1, duration: 0.25, ease: 'back.out(2)', overwrite: 'auto', clearProps: 'transform' });
+    }, { passive: true });
+
+    /* 7) Glare Hover: لمعة بتتبع الماوس على الكروت (بالتفويض فتشتغل مع إعادة الرسم) */
+    if (window.matchMedia('(hover: hover)').matches) {
+        var lastCard = null;
+        document.addEventListener('pointermove', function (e) {
+            var c = e.target.closest && e.target.closest('.stat-card, .card, .user-card');
+            if (lastCard && lastCard !== c) lastCard.classList.remove('glare');
+            lastCard = c;
+            if (!c) return;
+            var r = c.getBoundingClientRect();
+            c.style.setProperty('--gx', (e.clientX - r.left) + 'px');
+            c.style.setProperty('--gy', (e.clientY - r.top) + 'px');
+            c.classList.add('glare');
+        }, { passive: true });
+
+        /* 8) Magnet: زرار الشات العائم بينجذب ناحية المؤشر */
+        document.addEventListener('pointermove', function (e) {
+            var b = document.getElementById('chatFloatBtn');
+            if (!b || !visible(b)) return;
+            var r = b.getBoundingClientRect();
+            var dx = e.clientX - (r.left + r.width / 2), dy = e.clientY - (r.top + r.height / 2);
+            var near = Math.hypot(dx, dy) < 90;
+            gsap.to(b, { x: near ? dx * 0.25 : 0, y: near ? dy * 0.25 : 0, duration: near ? 0.25 : 0.5, ease: near ? 'power2.out' : 'elastic.out(1,0.5)', overwrite: 'auto' });
+        }, { passive: true });
+    }
+
+    /* 9) رسم الرسوم/التقارير لما تتغير الفترة (إعادة رسم صندوق التقارير) */
+    var rbox = document.getElementById('mReportsBox'), rsig = '', rtimer = 0;
+    if (rbox) new MutationObserver(function () {
+        clearTimeout(rtimer);
+        rtimer = setTimeout(function () {
+            var sig = rbox.textContent.length + '|' + (rbox.querySelector('select') ? rbox.querySelector('select').value : '');
+            if (sig !== rsig && visible(rbox)) { rsig = sig; animateReports(rbox); }
+        }, 80);
+    }).observe(rbox, { childList: true });
+
+    /* 10) Stepper: مراحل الطلب بتترسم بالتدريج (مرة لكل حالة جديدة بس) */
+    var seenSteps = {}, stepTimer = 0;
+    function animateSteppers() {
+        var cards = document.querySelectorAll('.ct-card');
+        var budget = 12;
+        cards.forEach(function (c) {
+            if (c.dataset.w || !visible(c) || budget <= 0) return;
+            c.dataset.w = '1';
+            var h = c.querySelector('h3');
+            var sig = (h ? h.textContent : '') + '|' + c.querySelectorAll('.ct-step.done').length + '|' + (c.querySelector('.ct-prog b') || {}).textContent;
+            if (seenSteps[sig]) return;
+            seenSteps[sig] = 1; budget--;
+            var steps = c.querySelectorAll('.ct-step');
+            var dots = c.querySelectorAll('.ct-step .dot');
+            gsap.set(steps, { '--lp': 0 });
+            var tl = gsap.timeline({ defaults: { ease: 'power2.out' } });
+            dots.forEach(function (d, i) {
+                tl.fromTo(d, { scale: 0.4, opacity: 0.3 }, { scale: 1, opacity: 1, duration: 0.35, ease: 'back.out(2)', clearProps: 'transform,opacity' }, i * 0.18);
+                tl.to(steps[i], { '--lp': 1, duration: 0.25 }, i * 0.18 + 0.05);
+            });
+            var fill = c.querySelector('.ct-prog .fill');
+            if (fill) tl.from(fill, { width: 0, duration: 0.8 }, 0.1);
+        });
+    }
+    new MutationObserver(function () {
+        clearTimeout(stepTimer);
+        stepTimer = setTimeout(animateSteppers, 60);
+    }).observe(document.body, { childList: true, subtree: true });
+
+    /* 11) إشعارات: دخول ناعم + سحب لأي جهة للإخفاء (Swipe Toast) */
+    var tc = document.getElementById('toastContainer');
+    if (tc) {
+        new MutationObserver(function (muts) {
+            muts.forEach(function (m) { m.addedNodes.forEach(function (n) {
+                if (n.classList && n.classList.contains('toast')) gsap.fromTo(n, { x: -60, opacity: 0 }, { x: 0, opacity: 1, duration: 0.4, ease: 'power3.out', clearProps: 'transform,opacity' });
+            }); });
+        }).observe(tc, { childList: true });
+        var drag = null;
+        tc.addEventListener('pointerdown', function (e) {
+            var t = e.target.closest('.toast'); if (!t || e.target.closest('.toast-close')) return;
+            drag = { t: t, x0: e.clientX, dx: 0, id: e.pointerId };
+            try { t.setPointerCapture(e.pointerId); } catch (er) {}
+        });
+        tc.addEventListener('pointermove', function (e) {
+            if (!drag || e.pointerId !== drag.id) return;
+            drag.dx = e.clientX - drag.x0;
+            gsap.set(drag.t, { x: drag.dx, opacity: 1 - Math.min(1, Math.abs(drag.dx) / 260) });
+        });
+        function endDrag(e) {
+            if (!drag || e.pointerId !== drag.id) return;
+            var t = drag.t, dx = drag.dx; drag = null;
+            if (Math.abs(dx) > 90) {
+                gsap.to(t, { x: dx > 0 ? 420 : -420, opacity: 0, duration: 0.25, ease: 'power2.in', onComplete: function () { t.remove(); } });
+            } else {
+                gsap.to(t, { x: 0, opacity: 1, duration: 0.35, ease: 'elastic.out(1,0.6)', clearProps: 'transform,opacity' });
+            }
+        }
+        tc.addEventListener('pointerup', endDrag);
+        tc.addEventListener('pointercancel', endDrag);
+    }
+
+    /* 12) جملة ترحيب بتتكتب (Text Type) بعد الدخول */
+    var welcomed = {};
+    var ud = document.getElementById('userDisplay');
+    if (ud) new MutationObserver(function () {
+        var m = ud.textContent.match(/👋\s*(\S+)/);
+        if (!m || ud.querySelector('.w-welcome')) return;
+        var name = m[1];
+        if (welcomed[name]) return; welcomed[name] = 1;
+        var h = new Date().getHours();
+        var msg = (h < 12 ? 'صباح الخير' : (h < 18 ? 'نهارك سعيد' : 'مساء الخير')) + ' يا ' + name + '، يومك موفّق ✨';
+        var d = document.createElement('div'); d.className = 'w-welcome'; d.setAttribute('aria-label', msg);
+        ud.appendChild(d);
+        var o = { n: 0 };
+        gsap.to(o, { n: msg.length, duration: Math.min(2.2, msg.length * 0.05), ease: 'none',
+            onUpdate: function () { d.textContent = msg.slice(0, Math.round(o.n)); },
+            onComplete: function () { d.textContent = msg; d.classList.add('done'); gsap.to(d, { opacity: 0, delay: 4, duration: 0.8, onComplete: function () { d.remove(); } }); } });
+    }).observe(ud, { childList: true });
+
+    /* 13) خلفية Aurora لشاشة الدخول (بتتوقف على الأجهزة الضعيفة وبتقف لما الشاشة تتقفل) */
+    (function () {
+        var ls = document.getElementById('loginScreen');
+        var conn = navigator.connection || {};
+        var weak = (navigator.hardwareConcurrency && navigator.hardwareConcurrency <= 4) || (navigator.deviceMemory && navigator.deviceMemory <= 2) || conn.saveData;
+        if (!ls || weak) return;
+        var a = document.createElement('div'); a.className = 'w-aurora'; a.setAttribute('aria-hidden', 'true');
+        a.innerHTML = '<i></i><i></i><i></i>';
+        ls.insertBefore(a, ls.firstChild);
+        var blobs = a.querySelectorAll('i');
+        var tl = gsap.timeline({ repeat: -1, yoyo: true, defaults: { ease: 'sine.inOut' } });
+        tl.to(blobs[0], { x: -120, y: 90, duration: 9 }, 0)
+          .to(blobs[1], { x: 140, y: -80, duration: 11 }, 0)
+          .to(blobs[2], { x: -90, y: -60, scale: 1.25, duration: 10 }, 0);
+        function sync() { tl.paused(!visible(ls)); }
+        new MutationObserver(sync).observe(ls, { attributes: true, attributeFilter: ['style'] });
+        sync();
+    })();
+
+    /* 14) شريط تنقل سفلي للموبايل (Dock) للمدير */
+    (function () {
+        var items = [
+            ['manager-dashboard', '📊', 'الرئيسية'], ['manager-requests', '📋', 'الطلبات'], ['manager-users', '👥', 'المستخدمين'],
+            ['manager-reports', '📈', 'التقارير'], ['manager-settings', '⚙️', 'الإعدادات']
+        ];
+        var nav = document.createElement('nav'); nav.id = 'wDock'; nav.setAttribute('aria-label', 'التنقل السريع');
+        nav.innerHTML = '<div class="w-pill"></div>' + items.map(function (x) {
+            return '<button type="button" data-tab="' + x[0] + '"><span class="ic">' + x[1] + '</span><span>' + x[2] + '</span></button>';
+        }).join('');
+        document.body.appendChild(nav);
+        var pill = nav.querySelector('.w-pill');
+        var mq = window.matchMedia('(max-width: 700px)');
+        function managerShown() { var t = document.getElementById('managerTabs'); return mq.matches && visible(t); }
+        function activeId() { var b = document.querySelector('.manager-tabs .tab-btn.active'); return b ? b.getAttribute('data-tab') : ''; }
+        function place(animate) {
+            var id = activeId(), cur = null;
+            nav.querySelectorAll('button').forEach(function (b) { var on = b.getAttribute('data-tab') === id; b.classList.toggle('active', on); if (on) cur = b; });
+            if (!cur || !nav.offsetWidth) { gsap.set(pill, { opacity: 0 }); return; }
+            var props = { left: cur.offsetLeft + 4, width: cur.offsetWidth - 8, opacity: 1 };
+            if (animate) gsap.to(pill, Object.assign({ duration: 0.4, ease: 'back.out(1.4)' }, props)); else gsap.set(pill, props);
+            nav.querySelectorAll('.ic').forEach(function (ic) { gsap.to(ic, { scale: ic.parentNode === cur ? 1.25 : 1, y: ic.parentNode === cur ? -2 : 0, duration: 0.3, ease: 'back.out(2)' }); });
+        }
+        function refresh() {
+            var on = managerShown();
+            document.body.classList.toggle('has-dock', on);
+            if (on) requestAnimationFrame(function () { place(false); });
+        }
+        nav.addEventListener('click', function (e) {
+            var b = e.target.closest('button'); if (!b) return;
+            if (typeof switchManagerTab === 'function') switchManagerTab(b.getAttribute('data-tab'));
+            if (lenis) lenis.scrollTo(0, { duration: 0.6 }); else window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+        var mt = document.getElementById('managerTabs');
+        if (mt) new MutationObserver(function () { place(true); }).observe(mt, { attributes: true, subtree: true, attributeFilter: ['class'] });
+        ['dashboard', 'managerPanel'].forEach(function (id) {
+            var el = document.getElementById(id);
+            if (el) new MutationObserver(refresh).observe(el, { attributes: true, attributeFilter: ['style', 'class'] });
+        });
+        window.addEventListener('resize', refresh);
+        refresh();
+    })();
+})();
 </script>
 
 </body>
