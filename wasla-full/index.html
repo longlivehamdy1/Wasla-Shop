@@ -1658,6 +1658,75 @@
         body:not(.login-mode) ::-webkit-scrollbar-thumb { background: rgba(255, 91, 91, .35); border-radius: 10px; }
         body:not(.login-mode) ::-webkit-scrollbar-track { background: transparent; }
         @media (max-width: 768px) { #wNet { opacity: .3; } body:not(.login-mode) .container { backdrop-filter: none; } }
+
+        /* ============================================================ */
+        /* ===== Wasla v7: حقول الإعدادات + وضع فاتح حقيقي (بدل قلب الألوان) ===== */
+        /* ============================================================ */
+        /* قاعدة عامة بأقل أولوية: أي حقل ملوش ستايل (زي الإعدادات) ياخد الشكل الزجاجي */
+        :where(body:not(.login-mode) #dashboard) :where(input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]):not([type="color"]), select, textarea) {
+            background: rgba(255, 255, 255, .07); color: #fff; border: 1px solid rgba(255, 255, 255, .12);
+            border-radius: 12px; padding: 11px 14px; font-size: 14px; font-family: inherit; max-width: 100%;
+        }
+        :where(body:not(.login-mode) #dashboard) :where(input, select, textarea)::placeholder { color: #7f8aae; }
+        :where(body:not(.login-mode) #dashboard) :where(select option) { background: #1a1f35; color: #fff; }
+        body:not(.login-mode) #mSettingsEmail, body:not(.login-mode) #mSetWarranty, body:not(.login-mode) #mSetLate, body:not(.login-mode) #mSetPickup { display: block; width: 100%; max-width: 440px; margin: 4px 0 12px; }
+        body:not(.login-mode) #dashboard input[type="checkbox"], body:not(.login-mode) #dashboard input[type="radio"] { accent-color: #ff5b5b; width: 18px; height: 18px; margin: 0; vertical-align: middle; cursor: pointer; }
+        body:not(.login-mode) #dashboard label:has(> input[type="checkbox"]) { display: inline-flex; align-items: center; gap: 10px; padding: 6px 0; cursor: pointer; }
+        body:not(.login-mode) #dashboard label:has(> input[type="checkbox"]):hover { color: #ff9d9d; }
+        body:not(.login-mode) #dashboard .om-l { font-weight: 600; letter-spacing: .2px; }
+        /* كروت الإعدادات (اللي عليها ستايل inline) */
+        body:not(.login-mode) #dashboard div[style*="rgba(255, 60, 60,0.05)"] {
+            background: linear-gradient(160deg, rgba(255, 255, 255, .06), rgba(255, 255, 255, .02)) !important;
+            border: 1px solid rgba(255, 255, 255, .09) !important; border-radius: 20px !important; padding: 22px !important;
+            backdrop-filter: blur(10px); transition: border-color .3s, box-shadow .3s;
+        }
+        body:not(.login-mode) #dashboard div[style*="rgba(255, 60, 60,0.05)"]:hover { border-color: rgba(255, 91, 91, .4) !important; box-shadow: 0 14px 34px rgba(255, 60, 60, .1); }
+        body:not(.login-mode) #dashboard div[style*="rgba(255, 60, 60,0.05)"] > h3 { margin-bottom: 14px; font-size: 18px; }
+        body:not(.login-mode) #dashboard div[style*="rgba(255, 60, 60,0.05)"] > .btn { margin: 10px 0 0; }
+
+        /* ===== الوضع الفاتح: ثيم حقيقي ===== */
+        html.w-inv { filter: none !important; background: none !important; }
+        html.w-inv img, html.w-inv video, html.w-inv iframe, html.w-inv .device-image { filter: none !important; }
+        html.w-light body:not(.login-mode) {
+            background: radial-gradient(900px circle at 92% -8%, rgba(255, 91, 91, .16), transparent 60%), radial-gradient(800px circle at 0% 105%, rgba(26, 140, 255, .14), transparent 60%), linear-gradient(135deg, #f1f4fc, #fdf1f3);
+            background-attachment: fixed; color: #1f2440;
+        }
+        html.w-light #wNet { opacity: .5; }
+        html.w-light body:not(.login-mode) .container { background: rgba(255, 255, 255, .72); border: 1px solid rgba(30, 40, 90, .08); box-shadow: 0 30px 70px rgba(60, 70, 130, .14); }
+        html.w-light body:not(.login-mode) .header { border-bottom-color: rgba(30, 40, 90, .1); }
+        html.w-light body:not(.login-mode) .brand-logo { box-shadow: 0 8px 22px rgba(179, 16, 17, .25); border: 1px solid rgba(30, 40, 90, .08); }
+        html.w-light body:not(.login-mode) .brand-sub, html.w-light body:not(.login-mode) .header h1 .brand-tagline { color: #5b6486; -webkit-text-fill-color: #5b6486; }
+        html.w-light body:not(.login-mode) [style*="color:#8892b0"], html.w-light body:not(.login-mode) [style*="color: #8892b0"], html.w-light body:not(.login-mode) .om-l, html.w-light body:not(.login-mode) .stat-card .label, html.w-light body:not(.login-mode) .user-card .contact-details { color: #5b6486 !important; }
+        html.w-light body:not(.login-mode) [style*="color:#ccd6f6"], html.w-light body:not(.login-mode) td, html.w-light body:not(.login-mode) label { color: #2b3350 !important; }
+        html.w-light body:not(.login-mode) .stat-card, html.w-light body:not(.login-mode) .card, html.w-light body:not(.login-mode) .user-card, html.w-light body:not(.login-mode) .ct-card {
+            background: rgba(255, 255, 255, .9); border: 1px solid rgba(30, 40, 90, .09); box-shadow: 0 6px 20px rgba(60, 70, 130, .08); color: #1f2440;
+        }
+        html.w-light body:not(.login-mode) .stat-card:hover, html.w-light body:not(.login-mode) .card:hover { box-shadow: 0 16px 36px rgba(255, 60, 60, .16); }
+        html.w-light body:not(.login-mode) .card h3, html.w-light body:not(.login-mode) .modal-content h2 { filter: none; }
+        html.w-light body:not(.login-mode) .manager-tabs { background: rgba(255, 255, 255, .7); border-color: rgba(30, 40, 90, .1); }
+        html.w-light body:not(.login-mode) .manager-tabs .tab-btn { color: #5b6486; }
+        html.w-light body:not(.login-mode) .manager-tabs .tab-btn:hover { color: #1f2440; background: rgba(30, 40, 90, .05); }
+        html.w-light body:not(.login-mode) .manager-tabs .tab-btn.active { color: #c62828; background: linear-gradient(135deg, rgba(255, 91, 91, .2), rgba(255, 91, 91, .07)); }
+        html.w-light body:not(.login-mode) .w-hbtn { background: rgba(30, 40, 90, .06); color: #2b3350; border-color: rgba(30, 40, 90, .14); }
+        html.w-light body:not(.login-mode) .search-box { background: rgba(255, 255, 255, .75); border-color: rgba(30, 40, 90, .1); }
+        html.w-light body:not(.login-mode) #dashboard input:not([type="checkbox"]):not([type="radio"]):not([type="file"]), html.w-light body:not(.login-mode) #dashboard select, html.w-light body:not(.login-mode) #dashboard textarea,
+        html.w-light body:not(.login-mode) .modal-content input:not([type="checkbox"]):not([type="radio"]):not([type="file"]), html.w-light body:not(.login-mode) .modal-content select, html.w-light body:not(.login-mode) .modal-content textarea {
+            background: #fff !important; color: #1f2440 !important; border: 1px solid rgba(30, 40, 90, .16);
+        }
+        html.w-light body:not(.login-mode) #dashboard input:focus, html.w-light body:not(.login-mode) #dashboard select:focus, html.w-light body:not(.login-mode) #dashboard textarea:focus,
+        html.w-light body:not(.login-mode) .modal-content input:focus, html.w-light body:not(.login-mode) .modal-content select:focus, html.w-light body:not(.login-mode) .modal-content textarea:focus { border-color: #ff5b5b; box-shadow: 0 0 0 4px rgba(255, 91, 91, .14); }
+        html.w-light body:not(.login-mode) input::placeholder, html.w-light body:not(.login-mode) textarea::placeholder { color: #8b93b3; }
+        html.w-light body:not(.login-mode) select option, html.w-light body:not(.login-mode) .modal-content select option { background: #fff; color: #1f2440; }
+        html.w-light body:not(.login-mode) th { background: linear-gradient(180deg, rgba(255, 91, 91, .16), rgba(255, 91, 91, .07)); color: #b31011; }
+        html.w-light body:not(.login-mode) th, html.w-light body:not(.login-mode) td { border-bottom-color: rgba(30, 40, 90, .08); }
+        html.w-light body:not(.login-mode) .table-responsive tbody tr:hover { background: rgba(255, 91, 91, .07); }
+        html.w-light body:not(.login-mode) .progress-bar { background: rgba(30, 40, 90, .1); }
+        html.w-light body:not(.login-mode) .al-row { border-bottom-color: rgba(30, 40, 90, .09); }
+        html.w-light body:not(.login-mode) .modal { background: rgba(25, 30, 60, .45); }
+        html.w-light body:not(.login-mode) .modal-content { background: linear-gradient(160deg, #ffffff, #f4f6fd); color: #1f2440; border-color: rgba(30, 40, 90, .1); box-shadow: 0 40px 90px rgba(40, 50, 110, .3); }
+        html.w-light body:not(.login-mode) #dashboard div[style*="rgba(255, 60, 60,0.05)"] { background: rgba(255, 255, 255, .85) !important; border-color: rgba(30, 40, 90, .1) !important; box-shadow: 0 6px 20px rgba(60, 70, 130, .07); }
+        html.w-light body:not(.login-mode) ::-webkit-scrollbar-thumb { background: rgba(179, 16, 17, .3); }
+        html.w-light #wProg { background: linear-gradient(90deg, #b31011, #ff5b5b, #1a8cff); }
     </style>
 </head>
 <body class="login-mode">
@@ -6443,6 +6512,24 @@ window.holdConfirm = function (message, opts) {
             cx.fillStyle = dm < 170 ? 'rgba(255,120,120,.9)' : 'rgba(170,185,255,.6)'; cx.beginPath(); cx.arc(p.x, p.y, 1.6, 0, 6.283); cx.fill();
         }
     });
+})();
+</script>
+
+<script>
+/* ===== Enter = دخول مباشر (وإنشاء الحساب لو شاشة التسجيل مفتوحة) ===== */
+(function () {
+    var lock = false;
+    document.addEventListener('keydown', function (e) {
+        if (e.key !== 'Enter' || e.isComposing || e.shiftKey || e.ctrlKey || e.altKey) return;
+        var t = e.target; if (!t || !t.closest) return;
+        if (t.tagName === 'BUTTON' || t.tagName === 'A' || t.tagName === 'TEXTAREA') return;
+        var fn = null;
+        if (t.closest('#loginBox')) fn = window.login;
+        else if (t.closest('#registerBox')) fn = window.addPublicClient;
+        if (typeof fn !== 'function' || lock) return;
+        e.preventDefault(); lock = true; setTimeout(function () { lock = false; }, 900);
+        fn();
+    }, true);
 })();
 </script>
 </body>
