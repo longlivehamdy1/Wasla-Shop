@@ -1994,6 +1994,7 @@
                 <div class="card"><div class="icon">📋</div><h3>طلباتي</h3><button class="btn" onclick="loadClientRequests()">عرض</button></div>
                 <div class="card"><div class="icon">💬</div><h3>التواصل مع الكاشير</h3><button class="btn btn-chat" onclick="openChatModal()">فتح الشات</button></div>
                 <div class="card"><div class="icon">⭐</div><h3>تقييم الخدمة</h3><button class="btn btn-warning" onclick="openRatingModal()">تقييم</button></div>
+                <div class="card"><div class="icon">🎁</div><h3>نقاط الولاء</h3><div id="clientLoyaltyPoints" style="font-size:26px;font-weight:900;color:#ff5b5b;margin-top:4px;">0</div><div style="font-size:12px;color:#8892b0;">كل طلب تستلمه يضيفلك نقاط</div></div>
             </div>
             <div id="clientRequestsContainer"></div>
         </div>
@@ -2146,6 +2147,19 @@
                     <label class="om-l">تنبيه لو الجهاز بقاله في الصيانة أكتر من (يوم)</label><input type="number" id="mSetLate" min="1">
                     <label class="om-l">تنبيه لو الجهاز جاهز ولم يُستلم من (يوم)</label><input type="number" id="mSetPickup" min="1">
                     <button class="btn btn-success" onclick="saveShopRules()">💾 حفظ</button>
+                </div>
+
+                <div style="margin:15px 0;background:rgba(255, 60, 60,0.05);padding:15px;border-radius:12px;border:1px solid rgba(255, 60, 60,0.1);">
+                    <h3 style="color:#ff5b5b;">⭐ نظام النقاط والولاء</h3>
+                    <label class="om-l">نقاط تُمنح للعميل عند استلام الجهاز (كل طلب مكتمل)</label>
+                    <input type="number" id="mSetLoyaltyPoints" min="0">
+                    <button class="btn btn-success" onclick="saveLoyaltySettings()">💾 حفظ</button>
+                    <p style="font-size:12px;color:#8892b0;margin:10px 0 6px;">تعديل رصيد نقاط عميل معيّن يدويًا (هدية أو استبدال):</p>
+                    <div class="settings-row">
+                        <input type="text" id="mLoyaltyClient" placeholder="اسم العميل">
+                        <input type="number" id="mLoyaltyAmount" min="0" placeholder="الرصيد الجديد">
+                        <button class="btn btn-outline" onclick="adjustClientLoyalty()">💾 تحديث رصيد العميل</button>
+                    </div>
                 </div>
 
                 <div style="margin:15px 0;background:rgba(255, 60, 60,0.05);padding:15px;border-radius:12px;border:1px solid rgba(255, 60, 60,0.1);">
@@ -2477,7 +2491,7 @@
 
     function emptyData() {
         return { users: [], requests: [], chats: [], logs: [], ratings: [], parts: [],
-            settings: { companyPhone: publicPhone || '01001234567', emailNotifications: {}, warrantyDays: 30, lateDays: 7, pickupDays: 7 } };
+            settings: { companyPhone: publicPhone || '01001234567', emailNotifications: {}, warrantyDays: 30, lateDays: 7, pickupDays: 7, loyaltyPointsPerOrder: 10 } };
     }
     function normalizeData(d) {
         ['users', 'requests', 'chats', 'logs', 'ratings', 'parts'].forEach(k => { if (!Array.isArray(d[k])) d[k] = []; });
@@ -3912,6 +3926,7 @@
                     <strong>${u.username}</strong>
                     <div><span class="role-tag" style="background:${roleColors[u.role]};color:#fff;padding:2px 10px;border-radius:10px;font-size:10px;">${roleNames[u.role] || u.role}</span></div>
                     ${contact ? `<div class="contact-details">${contact}</div>` : ''}
+                    ${u.role === 'client' ? `<div style="font-size:11px;color:#ff5b5b;font-weight:700;margin-top:4px;">🎁 ${Number(u.loyaltyPoints) || 0} نقطة</div>` : ''}
                     <button class="btn btn-outline btn-sm" onclick="changeUserPassword('${u.username}')" style="margin-top:6px;font-size:10px;padding:3px 10px;">🔑 كلمة مرور</button>
                     ${u.username !== 'manager' ? `<button class="btn btn-danger btn-sm" onclick="deleteUserV2('${u.username}')" style="margin-top:6px;font-size:10px;padding:3px 10px;">🗑️ حذف</button>` : '<span style="color:#8892b0;font-size:10px;">🔒 أساسي</span>'}
                 </div>
@@ -4255,8 +4270,14 @@
         }
     }
 
+    function renderClientLoyalty() {
+        if (!currentUser || currentUser.role !== 'client') return;
+        const el = document.getElementById('clientLoyaltyPoints');
+        if (el) el.textContent = Number(currentUser.loyaltyPoints) || 0;
+    }
     function loadClientRequests() {
         if (!currentUser) return;
+        renderClientLoyalty();
         const data = getData();
         const userRequests = data.requests.filter(r => r.clientName === currentUser.username);
         const container = document.getElementById('clientRequestsContainer');
@@ -5351,15 +5372,20 @@ ${o.notice ? `<div class="note">${esc(o.notice)}</div>` : ''}
             eta: ['📅 الموعد المتوقع', `أهلاً ${name} 👋\nالموعد المتوقع لتسليم جهازك ${dev}: ${r.eta ? fmtISO(r.eta) : '(هنبلغك)'}\n🔎 ${link}\n📞 ${co}`],
             ready: ['🔔 الجهاز جاهز', `أهلاً ${name} 👋\n🔔 جهازك ${dev} جاهز للاستلام!\nتعال ومعاك الوصل رقم ${r.id} (مش هنسلّم الجهاز من غيره).${rem > 0 ? `\n💵 المتبقي: ${money(rem)}` : ''}\n🛡️ ضمان ${warrantyDaysOf(r)} يوم\n📞 ${co}\nWasla`],
             reminder: ['⏰ تذكير بالاستلام', `أهلاً ${name} 👋\nتذكير: جهازك ${dev} جاهز${age > 0 ? ' من ' + age + ' يوم' : ''} ولسه ماتسلمش.\nمن فضلك تعال استلمه ومعاك الوصل رقم ${r.id}.${rem > 0 ? `\n💵 المتبقي: ${money(rem)}` : ''}\n📞 ${co}`],
-            balance: ['💵 مبلغ متبقي', `أهلاً ${name} 👋\nتذكير بالمبلغ المتبقي على صيانة جهازك ${dev}: ${money(rem)}.\n📞 ${co}`]
+            balance: ['💵 مبلغ متبقي', `أهلاً ${name} 👋\nتذكير بالمبلغ المتبقي على صيانة جهازك ${dev}: ${money(rem)}.\n📞 ${co}`],
+            thanks: ['🎁 شكرًا + نقاط الولاء', `أهلاً ${name} 👋\nشكرًا لاستلامك جهازك ${dev}!\n🎁 رصيدك الحالي من نقاط الولاء: ${clientLoyaltyOf(name)} نقطة.\nمتابعة واستلام من عندنا هيزوّد رصيدك في كل مرة 🙌\n📞 ${co}\nWasla`]
         };
+    }
+    function clientLoyaltyOf(username) {
+        const u = getData().users.find(x => x.username === username);
+        return u ? (Number(u.loyaltyPoints) || 0) : 0;
     }
     function openWaModal(id) {
         const r = getData().requests.find(x => x.id === id); if (!r) return;
         if (!r.clientPhone) { showToast('⚠️ العميل لم يسجل رقم موبايل', 'warning'); return; }
         waReqId = id;
         const t = waTemplates(r);
-        const def = r.status === 'ready_for_pickup' ? 'ready' : (r.quote && r.quote.status === 'proposed' ? 'quote' : 'received');
+        const def = r.status === 'picked_up' ? 'thanks' : r.status === 'ready_for_pickup' ? 'ready' : (r.quote && r.quote.status === 'proposed' ? 'quote' : 'received');
         $id('waTemplate').innerHTML = Object.entries(t).map(([k, v]) => `<option value="${k}" ${k === def ? 'selected' : ''}>${v[0]}</option>`).join('');
         $id('waInfo').textContent = `${r.clientName} — ${r.clientPhone}`;
         waSelectChanged();
@@ -5703,6 +5729,7 @@ ${o.notice ? `<div class="note">${esc(o.notice)}</div>` : ''}
     function loadShopRules() {
         const s = settingsOf();
         if ($id('mSetWarranty')) { $id('mSetWarranty').value = s.warrantyDays ?? 30; $id('mSetLate').value = s.lateDays ?? 7; $id('mSetPickup').value = s.pickupDays ?? 7; }
+        if ($id('mSetLoyaltyPoints')) $id('mSetLoyaltyPoints').value = s.loyaltyPointsPerOrder ?? 10;
     }
     function saveShopRules() {
         const data = getData();
@@ -5710,6 +5737,25 @@ ${o.notice ? `<div class="note">${esc(o.notice)}</div>` : ''}
         data.settings.lateDays = Math.max(1, parseInt($id('mSetLate').value) || 7);
         data.settings.pickupDays = Math.max(1, parseInt($id('mSetPickup').value) || 7);
         saveData(data); showToast('✅ تم حفظ إعدادات الضمان والتنبيهات', 'success'); addLog('تم تحديث إعدادات الضمان والتنبيهات'); updateAlertsBadge();
+    }
+
+    // ---------------- نظام النقاط والولاء ----------------
+    function saveLoyaltySettings() {
+        const data = getData();
+        data.settings.loyaltyPointsPerOrder = Math.max(0, parseInt($id('mSetLoyaltyPoints').value) || 0);
+        saveData(data); showToast('✅ تم حفظ إعدادات نظام النقاط', 'success'); addLog('تم تحديث نقاط الولاء لكل طلب');
+    }
+    function adjustClientLoyalty() {
+        const username = $id('mLoyaltyClient').value.trim();
+        const amount = Math.max(0, parseInt($id('mLoyaltyAmount').value) || 0);
+        if (!username) { showToast('⚠️ اكتب اسم العميل', 'warning'); return; }
+        const data = getData();
+        const u = data.users.find(x => x.username === username && x.role === 'client');
+        if (!u) { showToast('⚠️ مفيش عميل بالاسم ده', 'warning'); return; }
+        u.loyaltyPoints = amount;
+        saveData(data);
+        showToast(`✅ تم تحديث رصيد ${username} إلى ${amount} نقطة`, 'success');
+        addLog(`تم تعديل رصيد نقاط العميل ${username} إلى ${amount}`);
     }
 
     // ---------------- ضغط صور الأجهزة قبل الرفع ----------------
