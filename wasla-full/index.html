@@ -1983,6 +1983,11 @@
             </section>
         </div>
         <div class="lg-scroll-cue" id="lgCue" aria-hidden="true"><span></span></div>
+        <section class="lg-sec" id="lgCats">
+            <h2 class="lg-h">اطلب خدمتك</h2>
+            <p class="lg-sub">اختار القسم اللي محتاجه، وسجّل دخولك عشان تبعت طلبك.</p>
+            <div class="wc-cats" id="lgCatsGrid"></div>
+        </section>
         <section class="lg-sec" id="lgServices">
             <h2 class="lg-h">خدماتنا في مكان واحد</h2>
             <p class="lg-sub">من الكاميرات والأجهزة الإلكترونية للأجهزة الكهربائية والسباكة وكهرباء المنازل، كل اللي محتاجه في مكان واحد.</p>
@@ -6913,6 +6918,78 @@ function startRequest(k,dev){
   var rd=document.getElementById('recDeviceType');
   if(rd) rd.innerHTML=WCAT_ORDER.map(function(k){var c=WCAT[k];return '<optgroup label="'+c.icon+' '+c.title+'">'+c.items.map(function(it){return '<option value="'+wcEsc(it[0])+'">'+it[1]+' '+wcEsc(it[2])+'</option>';}).join('')+'</optgroup>';}).join('')+'<option value="أخرى">🔧 أخرى</option>';
   renderClientCats(); resetRequestForm();
+})();
+</script>
+<style id="wg-style">
+#lgCats { padding-bottom: 30px; } #lgCats .wc-cat { text-align: right; }
+#wcPub { position: fixed; inset: 0; z-index: 1250; display: none; align-items: center; justify-content: center; padding: 18px; background: rgba(5,8,18,.7); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
+#wcPub.open { display: flex; animation: mFade .2s ease; }
+#wcPub .pn { position: relative; width: 100%; max-width: 640px; max-height: 88vh; overflow-y: auto; background: #1a1f35; border: 1px solid rgba(255,255,255,.1); border-radius: 26px; padding: 26px 18px 20px; animation: gPop .28s cubic-bezier(.2,.9,.3,1); }
+#wcPub .gr { display: none; }
+#wcPub h2 { font-size: 21px; color: #ff7a6b; margin-bottom: 4px; text-align: center; } #wcPub p { font-size: 13px; color: #8892b0; text-align: center; margin-bottom: 16px; }
+#wcPub .cl { position: absolute; top: 12px; left: 14px; width: 36px; height: 36px; border: 0; border-radius: 12px; background: rgba(255,255,255,.08); color: #e6e9f5; font-size: 22px; line-height: 1; cursor: pointer; }
+html.w-light #wcPub .pn, html.w-light #wcGate .g { background: #fff; } html.w-light #wcPub .cl { color: #1a1f35; background: rgba(30,40,90,.08); } html.w-light #wcGate .g { color: #1a1f35; }
+@media (max-width: 768px) { #wcPub { align-items: flex-end; padding: 0; } #wcPub .pn { max-width: 100%; border-radius: 28px 28px 0 0; max-height: 90dvh; padding: 24px 14px calc(20px + env(safe-area-inset-bottom)); } #wcPub .gr { display: block; position: absolute; top: 9px; left: 50%; transform: translateX(-50%); width: 44px; height: 5px; border-radius: 3px; background: rgba(255,255,255,.2); } #wcPub .wc-grid { grid-template-columns: repeat(3,1fr); gap: 8px; } }
+#wcGate { position: fixed; inset: 0; z-index: 1300; display: none; align-items: center; justify-content: center; padding: 18px; background: rgba(5,8,18,.72); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
+#wcGate.open { display: flex; animation: mFade .2s ease; }
+#wcGate .g { width: 100%; max-width: 380px; text-align: center; color: #e6e9f5; background: #1a1f35; border: 1px solid rgba(255,255,255,.1); border-radius: 26px; padding: 26px 20px 20px; box-shadow: 0 24px 60px rgba(0,0,0,.55); animation: gPop .28s cubic-bezier(.2,.9,.3,1); }
+#wcGate .gi { width: 74px; height: 74px; margin: -52px auto 12px; border-radius: 22px; display: grid; place-items: center; font-size: 38px; box-shadow: 0 10px 26px rgba(0,0,0,.4); }
+#wcGate h3 { font-size: 19px; margin-bottom: 8px; } #wcGate p { font-size: 14px; color: #9aa4c4; line-height: 1.7; margin-bottom: 18px; }
+#wcGate button { width: 100%; border: 0; border-radius: 14px; padding: 14px; font: inherit; font-size: 15px; font-weight: 800; cursor: pointer; margin-top: 8px; }
+#wcGate .p { color: #fff; background: linear-gradient(135deg, var(--ac1,#ff5b5b), var(--ac2,#c0392b)); } #wcGate .s { color: #e6e9f5; background: rgba(255,255,255,.08); } #wcGate .x { background: transparent; color: #8892b0; font-weight: 600; }
+@keyframes gPop { from { transform: translateY(20px) scale(.94); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes gShake { 0%,100% { transform: none; } 20%,60% { transform: translateX(-7px); } 40%,80% { transform: translateX(7px); } }
+.lg-shake { animation: gShake .5s ease; }
+</style>
+<div id="wcPub" onclick="if(event.target===this)closePub()"><div class="pn"><div class="gr"></div><button type="button" class="cl" onclick="closePub()" aria-label="إغلاق">&times;</button><h2 id="wpTitle"></h2><p id="wpSub"></p><div class="wc-grid" id="wpGrid"></div></div></div>
+<div id="wcGate" onclick="if(event.target===this)closeGate()"><div class="g"><div class="gi" id="wcGateIc"></div><h3>سجّل دخولك الأول 🔐</h3><p id="wcGateTx"></p><button class="p" type="button" onclick="gateGo(false)">↪ تسجيل الدخول</button><button class="s" type="button" onclick="gateGo(true)">➕ إنشاء حساب جديد</button><button class="x" type="button" onclick="closeGate()">لاحقاً</button></div></div>
+<script>
+/* ===== كروت الأقسام في صفحة الدخول: العميل لازم يدخل حسابه الأول ===== */
+function renderLoginCats(){
+  var box=document.getElementById('lgCatsGrid'); if(!box) return;
+  box.innerHTML=WCAT_ORDER.map(function(k){var c=WCAT[k];return '<button type="button" class="wc-cat" style="background:'+c.grad+'" onclick="openPub(\''+k+'\')"><span class="ic">'+c.icon+'</span><span><b>'+c.title+'</b><small>'+c.items.length+' نوع</small></span></button>';}).join('');
+}
+function openPub(k){
+  var c=WCAT[k]; if(!c) return;
+  document.getElementById('wpTitle').textContent=c.icon+' '+c.title;
+  document.getElementById('wpSub').textContent=c.sub;
+  document.getElementById('wpGrid').innerHTML=c.items.map(function(it){return '<button type="button" class="wc-item" onclick="gateItem(\''+k+'\',\''+wcEsc(it[0])+'\',\''+wcEsc(it[2])+'\')"><span class="e">'+it[1]+'</span>'+wcEsc(it[2])+'</button>';}).join('');
+  document.getElementById('wcPub').classList.add('open');
+  document.body.style.overflow='hidden';
+}
+function closePub(){ document.getElementById('wcPub').classList.remove('open'); document.body.style.overflow=''; }
+function gateItem(k,dev,label){
+  var c=WCAT[k]; if(!c) return;
+  try{ sessionStorage.setItem('wCatPending',k); sessionStorage.setItem('wDevPending',dev); }catch(e){}
+  var ic=document.getElementById('wcGateIc'); ic.textContent=c.icon; ic.style.background=c.grad;
+  document.getElementById('wcGateTx').textContent='عشان تطلب «'+label+'» لازم تدخل على حسابك. معندكش حساب؟ اعمل واحد في ثواني.';
+  document.getElementById('wcGate').classList.add('open');
+}
+function closeGate(){ document.getElementById('wcGate').classList.remove('open'); }
+function gateGo(reg){
+  closeGate(); closePub();
+  var rb=document.getElementById('registerBox');
+  var regShown = rb && rb.style.display!=='none';
+  if(reg!==regShown && typeof toggleAuthBox==='function') toggleAuthBox();
+  var box=(reg?document.getElementById('registerBox'):document.getElementById('loginBox'));
+  window.scrollTo({top:0,behavior:'smooth'});
+  setTimeout(function(){
+    if(box){ box.classList.remove('lg-shake'); void box.offsetWidth; box.classList.add('lg-shake'); }
+    var f=document.getElementById(reg?'publicClientUsername':'loginUsername'); if(f) try{ f.focus({preventScroll:true}); }catch(e){ f.focus(); }
+  },450);
+}
+(function(){
+  renderLoginCats();
+  var _ea=window.enterApp;
+  if(typeof _ea==='function') window.enterApp=function(user,fresh){
+    var r=_ea.apply(this,arguments);
+    try{
+      var k=sessionStorage.getItem('wCatPending'), dv=sessionStorage.getItem('wDevPending');
+      if(k){ sessionStorage.removeItem('wCatPending'); sessionStorage.removeItem('wDevPending');
+        if(user&&user.role==='client'&&WCAT[k]) setTimeout(function(){ if(dv) startRequest(k,dv); else openCatalog(k); },900); }
+    }catch(e){}
+    return r;
+  };
 })();
 </script>
 <!-- ===== Wasla Mobile App Layer: واجهة تطبيق للموبايل (شريط علوي + قائمة سفلية + نوافذ منزلقة) ===== -->
