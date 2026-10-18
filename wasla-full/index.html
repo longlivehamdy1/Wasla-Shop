@@ -1919,7 +1919,7 @@
         <section class="lg-sec" id="lgServices">
             <h2 class="lg-h">خدماتنا في مكان واحد</h2>
             <p class="lg-sub">من الكاميرات للكاشير، كل اللي محتاجه لشغلك.</p>
-            <div class="lg-svc-grid"><div class="lg-svc"><span class="lg-svc-ico">📷</span><b>كاميرات مراقبة</b></div><div class="lg-svc"><span class="lg-svc-ico">🖐️</span><b>بصمة حضور وانصراف</b></div><div class="lg-svc"><span class="lg-svc-ico">🚪</span><b>بوابات إلكترونية</b></div><div class="lg-svc"><span class="lg-svc-ico">🚨</span><b>إنذار حريق</b></div><div class="lg-svc"><span class="lg-svc-ico">☎️</span><b>سنترالات</b></div><div class="lg-svc"><span class="lg-svc-ico">📡</span><b>دش مركزي</b></div><div class="lg-svc"><span class="lg-svc-ico">🌐</span><b>شبكات وإنترنت</b></div><div class="lg-svc"><span class="lg-svc-ico">🔊</span><b>أنظمة صوت</b></div><div class="lg-svc"><span class="lg-svc-ico">🛰️</span><b>GPS للسيارات</b></div><div class="lg-svc"><span class="lg-svc-ico">🖥️</span><b>نقاط بيع وكاشير</b></div></div>
+            <div class="lg-svc-grid"><div class="lg-svc"><span class="lg-svc-ico">📷</span><b>كاميرات مراقبة</b></div><div class="lg-svc"><span class="lg-svc-ico">🖐️</span><b>بصمة حضور وانصراف</b></div><div class="lg-svc"><span class="lg-svc-ico">🚪</span><b>بوابات إلكترونية</b></div><div class="lg-svc"><span class="lg-svc-ico">🚨</span><b>إنذار حريق</b></div><div class="lg-svc"><span class="lg-svc-ico">☎️</span><b>سنترالات</b></div><div class="lg-svc"><span class="lg-svc-ico">📡</span><b>دش مركزي</b></div><div class="lg-svc"><span class="lg-svc-ico">🌐</span><b>شبكات وإنترنت</b></div><div class="lg-svc"><span class="lg-svc-ico">🔊</span><b>أنظمة صوت</b></div><div class="lg-svc"><span class="lg-svc-ico">🛰️</span><b>GPS للسيارات</b></div><div class="lg-svc"><span class="lg-svc-ico">🖥️</span><b>نقاط بيع وكاشير</b></div><div class="lg-svc"><span class="lg-svc-ico">🖥️</span><b>صيانة كمبيوتر</b><small style="display:block;font-weight:400;font-size:11px;color:#8b96ba;margin-top:6px;line-height:1.6;">مازربورد، رامات، هارد/SSD، باور سبلاي، كارت شاشة وكل القطع</small></div><div class="lg-svc"><span class="lg-svc-ico">💻</span><b>صيانة لابتوب</b><small style="display:block;font-weight:400;font-size:11px;color:#8b96ba;margin-top:6px;line-height:1.6;">شاشات، بطاريات، كيبورد، شاحن، لوحة أم وكل القطع</small></div></div>
         </section>
         <section class="lg-sec" id="lgSteps">
             <h2 class="lg-h">إزاي بتتابع جهازك؟</h2>
@@ -2246,6 +2246,17 @@
             <button class="btn btn-camera btn-sm" onclick="openCameraModal('reqSerial')">📷 تصوير</button>
         </div>
         <input type="text" id="reqClientName" placeholder="اسم العميل">
+        <label style="color:#8892b0;font-size:14px;margin-top:10px;display:block;">نوع الجهاز / الخدمة:</label>
+        <select id="reqDeviceType">
+            <option value="كاميرا">📷 كاميرا</option>
+            <option value="بصمة">🖐️ بصمة</option>
+            <option value="ساوند سيستم">🔊 ساوند سيستم</option>
+            <option value="انتركم">☎️ انتركم</option>
+            <option value="سمارت لوك">🔐 سمارت لوك</option>
+            <option value="كمبيوتر">🖥️ كمبيوتر (PC)</option>
+            <option value="لابتوب">💻 لابتوب (Laptop)</option>
+            <option value="أخرى">🔧 أخرى</option>
+        </select>
         <select id="reqPriority">
             <option value="normal">🟢 عادي</option>
             <option value="medium">🟡 متوسط</option>
@@ -2296,6 +2307,8 @@
             <option value="ساوند سيستم">🔊 ساوند سيستم</option>
             <option value="انتركم">☎️ انتركم</option>
             <option value="سمارت لوك">🔐 سمارت لوك</option>
+            <option value="كمبيوتر">🖥️ كمبيوتر (PC)</option>
+            <option value="لابتوب">💻 لابتوب (Laptop)</option>
             <option value="أخرى">🔧 أخرى</option>
         </select>
         <textarea id="recDeviceDetails" placeholder="تفاصيل الجهاز (المواصفات، العيوب، الملاحظات)"></textarea>
@@ -4194,6 +4207,7 @@
         const serialNumber = document.getElementById('reqSerial').value.trim();
         const clientName = (currentUser && currentUser.role === 'client') ? currentUser.username : document.getElementById('reqClientName').value.trim();
         const priority = document.getElementById('reqPriority').value;
+        const deviceType = document.getElementById('reqDeviceType').value;
 
         if (!serialNumber || !clientName) {
             showToast('⚠️ يرجى ملء جميع الحقول', 'warning');
@@ -4212,7 +4226,7 @@
             status: 'pending',
             progress: 0,
             priority: priority,
-            deviceType: '',
+            deviceType: deviceType,
             deviceDetails: '',
             images: uploadedImages,
             createdAt: new Date().toLocaleString('ar-EG'),
@@ -4229,6 +4243,7 @@
         closeModal('requestModal');
         document.getElementById('reqSerial').value = '';
         document.getElementById('reqClientName').value = currentUser.username;
+        document.getElementById('reqDeviceType').value = 'كاميرا';
         document.getElementById('reqImagesPreview').innerHTML = '';
         uploadedImages = [];
         loadClientRequests();
