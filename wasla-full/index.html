@@ -1286,6 +1286,62 @@
         .table-responsive tbody tr { transition: background-color 0.2s ease, transform 0.2s ease; }
         .table-responsive tbody tr:hover { background: rgba(255, 60, 60,0.04); transform: translateX(-2px); }
 
+        /* ================================================================ */
+        /* ===== تحسينات الموبايل: مودالات "Bottom Sheet" + لمسة سلسة ===== */
+        /* ================================================================ */
+        @keyframes sheetUp {
+            from { transform: translateY(100%); }
+            to   { transform: translateY(0); }
+        }
+        .modal { transition: background 0.25s ease; }
+        .modal-content { transition: transform 0.28s cubic-bezier(.16,1,.3,1), opacity 0.22s ease; }
+        .modal.closing { background: rgba(0, 0, 0, 0); }
+        .modal.closing .modal-content { transform: translateY(18px) scale(0.97); opacity: 0; }
+        @media (max-width: 768px) {
+            .modal { align-items: flex-end; }
+            .modal-content {
+                width: 100%;
+                max-width: 100%;
+                max-height: 86vh;
+                border-radius: 22px 22px 0 0;
+                padding: 22px 18px calc(18px + env(safe-area-inset-bottom, 0px));
+                position: relative;
+                animation: sheetUp 0.32s cubic-bezier(.16,1,.3,1);
+            }
+            .modal-content::before {
+                content: "";
+                position: absolute;
+                top: 9px; left: 50%;
+                width: 38px; height: 4px;
+                border-radius: 3px;
+                background: rgba(255, 255, 255, 0.25);
+                transform: translateX(-50%);
+            }
+            .modal-content h2 { margin-top: 6px; font-size: 18px; }
+            .modal.closing .modal-content { transform: translateY(100%); opacity: 1; }
+            .modal-content input, .modal-content select, .modal-content textarea { font-size: 16px; padding: 13px 16px; }
+            .btn, .card button, .whatsapp-btn, .table-action-btn { min-height: 44px; }
+            .cards { grid-template-columns: 1fr 1fr; gap: 12px; }
+            .card { padding: 16px 12px; }
+            .manager-tabs {
+                flex-wrap: nowrap;
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+                scroll-snap-type: x proximity;
+                scrollbar-width: thin;
+            }
+            .manager-tabs::-webkit-scrollbar { height: 5px; }
+            .manager-tabs::-webkit-scrollbar-thumb { background: rgba(255, 91, 91, 0.35); border-radius: 10px; }
+            .manager-tabs .tab-btn { flex: 0 0 auto; scroll-snap-align: start; }
+        }
+        @media (max-width: 480px) {
+            .cards { grid-template-columns: 1fr; }
+            .modal-content h2 { font-size: 17px; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            .modal-content, .modal { animation: none !important; transition: none !important; }
+        }
+
         /* ===== شريط خدمات الشركة (كاميرات / بصمة / شبكات ...) ===== */
         .services-strip {
             display: flex;
@@ -3717,14 +3773,17 @@
     }
 
     function closeModal(id) {
-        document.getElementById(id).classList.remove('active');
+        const m = document.getElementById(id);
+        if (!m || !m.classList.contains('active')) return;
+        m.classList.add('closing');
+        setTimeout(() => { m.classList.remove('active'); m.classList.remove('closing'); }, 260);
     }
 
     document.querySelectorAll('.modal').forEach(modal => {
         modal.addEventListener('click', (e) => {
             if (e.target === modal) {
-                modal.classList.remove('active');
                 if (modal.id === 'cameraModal') stopCamera();
+                closeModal(modal.id);
             }
         });
     });
