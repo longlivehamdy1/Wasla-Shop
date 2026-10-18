@@ -2080,6 +2080,7 @@
                 <div class="card"><div class="icon">📥</div><h3>استلام جهاز</h3><button class="btn btn-warning" onclick="openModal('receiveModal')">استلام</button></div>
                 <div class="card"><div class="icon">📊</div><h3>تحديث نسبة الصيانة</h3><button class="btn btn-warning" onclick="openModal('progressModal')">تحديث</button></div>
                 <div class="card"><div class="icon">🖨️</div><h3>طباعة إيصال</h3><button class="btn btn-warning" onclick="openModal('invoiceModal')">طباعة</button></div>
+                <div class="card"><div class="icon">🏬</div><h3>إدارة المخازن</h3><button class="btn btn-warning" onclick="whOpenModal()">فتح المخازن</button></div>
                 <div class="card"><div class="icon">💬</div><h3>الشات مع العملاء</h3><button class="btn btn-chat" onclick="openChatModal()">فتح الشات</button></div>
             </div>
             <div id="cashierRequestsContainer"></div>
@@ -2111,6 +2112,7 @@
                 <button class="tab-btn" data-tab="manager-alerts" onclick="switchManagerTab('manager-alerts')">🚨 التنبيهات <span id="mAlertsBadge" style="display:none;background:#e74c3c;color:#fff;border-radius:10px;padding:1px 7px;font-size:11px;">0</span></button>
                 <button class="tab-btn" data-tab="manager-reports" onclick="switchManagerTab('manager-reports')">📊 التقارير</button>
                 <button class="tab-btn" data-tab="manager-parts" onclick="switchManagerTab('manager-parts')">🔩 قطع الغيار</button>
+                <button class="tab-btn" data-tab="manager-warehouses" onclick="switchManagerTab('manager-warehouses')">🏬 المخازن</button>
                 <button class="tab-btn" data-tab="manager-settings" onclick="switchManagerTab('manager-settings')">⚙️ الإعدادات</button>
             </div>
 
@@ -2194,6 +2196,7 @@
             <div class="tab-content" id="manager-alerts"><div id="mAlertsBox"></div></div>
             <div class="tab-content" id="manager-reports"><div id="mReportsBox"></div></div>
             <div class="tab-content" id="manager-parts"><div id="mPartsBox"></div></div>
+            <div class="tab-content" id="manager-warehouses"><div id="whBox"></div></div>
 
             <div class="tab-content" id="manager-settings">
                 <div style="margin:15px 0;background:rgba(255, 60, 60,0.05);padding:15px;border-radius:12px;border:1px solid rgba(255, 60, 60,0.1);">
@@ -2564,7 +2567,7 @@
             settings: { companyPhone: publicPhone || '01001234567', emailNotifications: {}, warrantyDays: 30, lateDays: 7, pickupDays: 7, loyaltyPointsPerOrder: 10 } };
     }
     function normalizeData(d) {
-        ['users', 'requests', 'chats', 'logs', 'ratings', 'parts'].forEach(k => { if (!Array.isArray(d[k])) d[k] = []; });
+        ['users', 'requests', 'chats', 'logs', 'ratings', 'parts', 'stockLog'].forEach(k => { if (!Array.isArray(d[k])) d[k] = []; });
         if (!d.settings) d.settings = emptyData().settings;
         return d;
     }
@@ -2636,6 +2639,8 @@
         }
         const rc = appData.ratings || [], rb = baseline.ratings || [];
         if (rc.length > rb.length) ops.ratings = { append: rc.slice(rb.length) };
+        const sc = appData.stockLog || [], sb = baseline.stockLog || [];
+        if (sc.length > sb.length) ops.stockLog = { append: sc.slice(sb.length) };
         const lc = appData.logs || [], lb = baseline.logs || [];
         if (lc.length < lb.length) ops.logs = { clear: true, append: lc };
         else if (lc.length > lb.length) ops.logs = { append: lc.slice(lb.length) };
@@ -3834,6 +3839,8 @@
             renderManagerReports();
         } else if (tabId === 'manager-parts') {
             renderManagerParts();
+        } else if (tabId === 'manager-warehouses') {
+            whMount(document.getElementById('whBox'));
         }
     }
 
@@ -5439,7 +5446,7 @@ ${o.notice ? `<div class="note">${esc(o.notice)}</div>` : ''}
         const qty = parseInt($id('omPartQty').value) || 0;
         if (!part || qty < 1) return;
         if (Number(part.qty) < qty) { showToast('❌ الكمية المتاحة أقل', 'error'); return; }
-        part.qty = Number(part.qty) - qty;
+        whConsume(part, qty, data, r.id);
         if (!r.partsUsed) r.partsUsed = [];
         r.partsUsed.push({ id: generateId(), partId: part.id, name: part.name, qty, cost: Number(part.cost) || 0, price: Number(part.price) || 0, by: currentUser.username, ts: Date.now() });
         saveData(data); showToast(`✅ تم خصم ${qty} من ${part.name}`, 'success'); addLog(`استخدم ${currentUser.username} ${qty} × ${part.name} في الطلب ${r.id}`);
@@ -5799,12 +5806,14 @@ ${o.notice ? `<div class="note">${esc(o.notice)}</div>` : ''}
     function addPart() {
         const name = $id('pName').value.trim(); if (!name) { showToast('⚠️ اكتب اسم القطعة', 'warning'); return; }
         const data = getData(); if (!data.parts) data.parts = [];
-        data.parts.push({ id: generateId(), name, qty: Number($id('pQty').value) || 0, min: Number($id('pMin').value) || 0, cost: Number($id('pCost').value) || 0, price: Number($id('pPrice').value) || 0 });
+        { const _q = Number($id('pQty').value) || 0, _w = whList()[0].id, _p = { id: generateId(), name, qty: _q, stock: { [_w]: _q }, min: Number($id('pMin').value) || 0, cost: Number($id('pCost').value) || 0, price: Number($id('pPrice').value) || 0 };
+          data.parts.push(_p); if (_q > 0) whLogAdd(data, { type: 'in', partId: _p.id, partName: name, qty: _q, wh: _w, note: 'رصيد افتتاحي' }); }
         saveData(data); addLog(`أضاف ${currentUser.username} قطعة غيار: ${name}`); renderManagerParts();
     }
     function editPart(id, field, el) {
         const data = getData(), p = (data.parts || []).find(x => x.id === id); if (!p) return;
         p[field] = field === 'name' ? el.value.trim() : Math.max(0, Number(el.value) || 0);
+        if (field === 'qty') whSetTotal(p, p.qty, data);
         saveData(data); updateAlertsBadge();
     }
     async function deletePart(id) {
@@ -6992,6 +7001,309 @@ function gateGo(reg){
   };
 })();
 </script>
+<style id="wh-style">
+.wh-tabs { display:flex; gap:8px; overflow-x:auto; padding:2px 2px 12px; scrollbar-width:none; } .wh-tabs::-webkit-scrollbar { display:none; }
+.wh-tab { flex:none; border:1px solid rgba(255,255,255,.1); background:rgba(255,255,255,.05); color:#c5cbe3; border-radius:999px; padding:9px 16px; font:inherit; font-size:13.5px; font-weight:700; cursor:pointer; transition:.2s; }
+.wh-tab.on { background:linear-gradient(135deg,var(--ac1,#ff5b5b),var(--ac2,#c0392b)); color:#fff; border-color:transparent; }
+.wh-stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:10px; margin-bottom:14px; }
+.wh-stat { border-radius:18px; padding:14px 12px; background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.08); text-align:center; }
+.wh-stat b { display:block; font-size:24px; color:#fff; margin-bottom:2px; } .wh-stat span { font-size:12px; color:#8892b0; }
+.wh-stat.warn b { color:#f5a623; } .wh-stat.bad b { color:#ff6b6b; } .wh-stat.good b { color:#2ecc71; }
+.wh-h { font-size:15px; font-weight:800; color:#e6e9f5; margin:16px 2px 10px; }
+.wh-whs { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:10px; }
+.wh-wcard { border-radius:18px; padding:14px; background:linear-gradient(135deg,rgba(59,130,246,.18),rgba(59,130,246,.05)); border:1px solid rgba(59,130,246,.25); }
+.wh-wcard b { display:block; color:#fff; font-size:15px; margin-bottom:6px; } .wh-wcard small { display:block; color:#9fb0d8; font-size:12px; line-height:1.7; }
+.wh-bar { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-bottom:12px; }
+.wh-bar input[type=text], .wh-bar select { flex:1 1 160px; min-width:0; padding:11px 14px; border-radius:14px; border:1px solid rgba(255,255,255,.12); background:rgba(255,255,255,.06); color:#fff; font:inherit; font-size:14px; }
+.wh-btn { border:0; border-radius:13px; padding:10px 14px; font:inherit; font-size:13px; font-weight:800; color:#fff; cursor:pointer; background:rgba(255,255,255,.1); transition:.15s; } .wh-btn:active { transform:scale(.95); }
+.wh-btn.in { background:#1f9d55; } .wh-btn.out { background:#d64545; } .wh-btn.tr { background:#2f6fd6; } .wh-btn.ad { background:#c98a12; } .wh-btn.pr { background:linear-gradient(135deg,var(--ac1,#ff5b5b),var(--ac2,#c0392b)); }
+.wh-chip { border:1px solid rgba(255,255,255,.12); background:transparent; color:#aab2d0; border-radius:999px; padding:7px 13px; font:inherit; font-size:12.5px; font-weight:700; cursor:pointer; } .wh-chip.on { background:rgba(255,255,255,.14); color:#fff; }
+.wh-list { display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:12px; }
+.wh-card { border-radius:20px; padding:14px; background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.09); }
+.wh-card.low { border-color:rgba(245,166,35,.55); } .wh-card.zero { border-color:rgba(255,107,107,.6); background:rgba(255,107,107,.07); }
+.wh-top { display:flex; justify-content:space-between; gap:8px; align-items:flex-start; } .wh-top b { color:#fff; font-size:15px; display:block; } .wh-top small { color:#8892b0; font-size:12px; }
+.wh-badge { flex:none; font-size:11px; font-weight:800; padding:4px 10px; border-radius:999px; } .wh-badge.ok { background:rgba(46,204,113,.18); color:#2ecc71; } .wh-badge.low { background:rgba(245,166,35,.2); color:#f5a623; } .wh-badge.zero { background:rgba(255,107,107,.2); color:#ff6b6b; }
+.wh-qty { margin:10px 0 6px; display:flex; align-items:baseline; gap:6px; } .wh-qty strong { font-size:30px; color:#fff; line-height:1; } .wh-qty span, .wh-qty em { font-size:12px; color:#8892b0; font-style:normal; }
+.wh-chips { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:8px; } .wh-chips i { font-style:normal; font-size:11.5px; background:rgba(255,255,255,.08); color:#c5cbe3; padding:4px 10px; border-radius:999px; }
+.wh-pr { font-size:12px; color:#8892b0; margin-bottom:8px; }
+.wh-acts { display:flex; flex-wrap:wrap; gap:6px; } .wh-acts button { flex:1 1 auto; min-width:44px; border:0; border-radius:11px; padding:9px 8px; font:inherit; font-size:12.5px; font-weight:800; color:#fff; cursor:pointer; background:rgba(255,255,255,.09); }
+.wh-acts .in { background:rgba(31,157,85,.85); } .wh-acts .out { background:rgba(214,69,69,.85); } .wh-acts .tr { background:rgba(47,111,214,.85); } .wh-acts .ad { background:rgba(201,138,18,.85); }
+.wh-row { display:flex; align-items:center; gap:10px; padding:11px 12px; border-radius:14px; background:rgba(255,255,255,.05); margin-bottom:8px; }
+.wh-row .ic { width:38px; height:38px; flex:none; border-radius:12px; display:grid; place-items:center; font-size:18px; } .wh-row .tx { flex:1; min-width:0; } .wh-row .tx b { display:block; color:#fff; font-size:14px; } .wh-row .tx small { color:#8892b0; font-size:12px; line-height:1.6; display:block; }
+.wh-row .q { font-weight:900; font-size:16px; flex:none; } .t-in .ic { background:rgba(46,204,113,.18); } .t-in .q { color:#2ecc71; } .t-out .ic { background:rgba(255,107,107,.18); } .t-out .q { color:#ff6b6b; } .t-transfer .ic { background:rgba(59,130,246,.2); } .t-transfer .q { color:#6aa3ff; } .t-adjust .ic { background:rgba(245,166,35,.2); } .t-adjust .q { color:#f5a623; } .t-use .ic { background:rgba(155,89,182,.22); } .t-use .q { color:#c58be0; }
+.wh-row input[type=text] { flex:1; min-width:0; padding:9px 12px; border-radius:11px; border:1px solid rgba(255,255,255,.12); background:rgba(255,255,255,.06); color:#fff; font:inherit; }
+.wh-empty { text-align:center; color:#8892b0; padding:30px 10px; font-size:14px; }
+.wh-seg { display:grid; grid-template-columns:repeat(4,1fr); gap:6px; margin:4px 0 12px; } .wh-seg button { border:1px solid rgba(255,255,255,.12); background:rgba(255,255,255,.05); color:#c5cbe3; border-radius:12px; padding:10px 2px; font:inherit; font-size:12.5px; font-weight:800; cursor:pointer; } .wh-seg button.on { color:#fff; border-color:transparent; } .wh-seg button.on[data-t=in] { background:#1f9d55; } .wh-seg button.on[data-t=out] { background:#d64545; } .wh-seg button.on[data-t=transfer] { background:#2f6fd6; } .wh-seg button.on[data-t=adjust] { background:#c98a12; }
+.wh-lbl { display:block; font-size:13px; color:#8892b0; margin:10px 2px 4px; } .wh-info { font-size:12.5px; color:#9fb0d8; margin:6px 2px 0; min-height:18px; }
+html.w-light .wh-stat b, html.w-light .wh-top b, html.w-light .wh-qty strong, html.w-light .wh-wcard b, html.w-light .wh-row .tx b, html.w-light .wh-h { color:#1a1f35; }
+html.w-light .wh-tab, html.w-light .wh-card, html.w-light .wh-stat, html.w-light .wh-row, html.w-light .wh-chip { background:rgba(30,40,90,.05); border-color:rgba(30,40,90,.12); color:#2a3050; }
+html.w-light .wh-bar input[type=text], html.w-light .wh-bar select, html.w-light .wh-row input[type=text] { background:#fff; color:#1a1f35; border-color:rgba(30,40,90,.2); }
+@media (max-width:768px) { .wh-list { grid-template-columns:1fr; } .wh-stat b { font-size:21px; } }
+</style>
+
+<div class="modal" id="whModal"><div class="modal-content" style="max-width:1000px;width:96%;max-height:92vh;overflow-y:auto;"><span class="close-btn" onclick="closeModal('whModal')">&times;</span><h2>🏬 إدارة المخازن</h2><div id="whModalBody"></div></div></div>
+
+<div class="modal" id="whMoveModal"><div class="modal-content" style="max-width:480px;">
+  <span class="close-btn" onclick="closeModal('whMoveModal')">&times;</span>
+  <h2 id="whmTitle">حركة مخزون</h2>
+  <div class="wh-seg" id="whmTypes"><button type="button" data-t="in" onclick="whSetType('in')">⬇️ وارد</button><button type="button" data-t="out" onclick="whSetType('out')">⬆️ صرف</button><button type="button" data-t="transfer" onclick="whSetType('transfer')">🔁 تحويل</button><button type="button" data-t="adjust" onclick="whSetType('adjust')">⚖️ جرد</button></div>
+  <label class="wh-lbl">الصنف</label><select id="whmItem" onchange="whmInfo()"></select>
+  <label class="wh-lbl" id="whmFromLbl">المخزن</label><select id="whmFrom" onchange="whmInfo()"></select>
+  <div id="whmToWrap" style="display:none;"><label class="wh-lbl">إلى مخزن</label><select id="whmTo"></select></div>
+  <label class="wh-lbl" id="whmQtyLbl">الكمية</label><input type="number" id="whmQty" min="0" step="any" inputmode="decimal" placeholder="0">
+  <div id="whmCostWrap" style="display:none;"><label class="wh-lbl">سعر الشراء للوحدة (اختياري)</label><input type="number" id="whmCost" min="0" step="any" inputmode="decimal" placeholder="0"></div>
+  <label class="wh-lbl">ملاحظة (اختياري)</label><input type="text" id="whmNote" placeholder="مورد / سبب / رقم فاتورة">
+  <div class="wh-info" id="whmInfo"></div>
+  <button class="btn btn-success" style="width:100%;margin-top:12px;" onclick="whDoMove()">✔️ تأكيد</button>
+</div></div>
+
+<div class="modal" id="whItemModal"><div class="modal-content" style="max-width:480px;">
+  <span class="close-btn" onclick="closeModal('whItemModal')">&times;</span>
+  <h2 id="whiTitle">صنف جديد</h2>
+  <input type="hidden" id="whiId">
+  <input type="text" id="whiName" placeholder="اسم الصنف *">
+  <input type="text" id="whiSku" placeholder="الكود / الباركود (اختياري)">
+  <input type="text" id="whiCat" list="whCatList" placeholder="التصنيف (كاميرات، تكييفات، سباكة...)">
+  <datalist id="whCatList"><option value="كاميرات"><option value="بصمة وسمارت لوك"><option value="شبكات"><option value="تكييفات"><option value="ثلاجات وغسالات"><option value="سباكة"><option value="كهرباء"><option value="أثاث"><option value="إكسسوارات"><option value="أدوات وعدد"></datalist>
+  <select id="whiUnit"><option>قطعة</option><option>متر</option><option>علبة</option><option>كرتونة</option><option>لتر</option><option>كيلو</option><option>طقم</option></select>
+  <input type="number" id="whiMin" min="0" step="any" placeholder="حد التنبيه (أقل كمية)">
+  <input type="number" id="whiCost" min="0" step="any" placeholder="سعر الشراء">
+  <input type="number" id="whiPrice" min="0" step="any" placeholder="سعر البيع">
+  <div id="whiQtyWrap"><input type="number" id="whiQty" min="0" step="any" placeholder="الكمية الافتتاحية"><select id="whiWh"></select></div>
+  <button class="btn btn-success" style="width:100%;margin-top:6px;" onclick="whSaveItem()">💾 حفظ</button>
+</div></div>
+
+<script>
+/* ===== إدارة المخازن ===== */
+var WH = { tab: 'overview', q: '', wh: 'all', low: false, lt: 'all', lq: '', root: null, mt: 'in' };
+var WH_TYPES = { in: ['⬇️', 'وارد'], out: ['⬆️', 'صرف'], transfer: ['🔁', 'تحويل'], adjust: ['⚖️', 'جرد'], use: ['🔧', 'استخدام'] };
+function whG(id) { return document.getElementById(id); }
+function whMgr() { return typeof currentUser !== 'undefined' && currentUser && currentUser.role === 'manager'; }
+function whList() { var l = (getData().settings || {}).warehouses; return (Array.isArray(l) && l.length) ? l : [{ id: 'main', name: 'المخزن الرئيسي' }]; }
+function whName(id) { var l = whList(); for (var i = 0; i < l.length; i++) if (l[i].id === id) return l[i].name; return id || '—'; }
+function whStock(p) { var st = p.stock; if (!st || typeof st !== 'object') { st = {}; st[whList()[0].id] = Number(p.qty) || 0; } return st; }
+function whTotal(p) { var t = 0, st = whStock(p); for (var k in st) t += Number(st[k]) || 0; return Math.round(t * 1000) / 1000; }
+function whAt(p, w) { return w === 'all' ? whTotal(p) : (Number(whStock(p)[w]) || 0); }
+function whFmt(n) { return (Math.round((Number(n) || 0) * 100) / 100).toLocaleString('ar-EG'); }
+function whState(p) { var t = whTotal(p); return t <= 0 ? 'zero' : (t <= Number(p.min || 0) ? 'low' : 'ok'); }
+function whLogAdd(data, e) { if (!data.stockLog) data.stockLog = []; e.id = generateId(); e.ts = Date.now(); e.date = new Date().toLocaleString('ar-EG'); data.stockLog.push(e); }
+function whSetTotal(p, n, data) {
+  var st = Object.assign({}, whStock(p)), ids = Object.keys(st), total = whTotal(p), d = n - total;
+  var first = whList()[0].id; if (!(first in st)) st[first] = 0;
+  if (d > 0) st[first] += d; else { var ks = Object.keys(st); for (var i = 0; i < ks.length && d < 0; i++) { var t = Math.min(st[ks[i]], -d); st[ks[i]] -= t; d += t; } }
+  p.stock = st; p.qty = whTotal(p);
+  if (n !== total) whLogAdd(data, { type: 'adjust', partId: p.id, partName: p.name, qty: Math.abs(n - total), wh: first, before: total, after: n, note: 'تعديل من تبويب قطع الغيار' });
+}
+function whConsume(p, qty, data, ref) {
+  var st = Object.assign({}, whStock(p)), left = qty, ks = Object.keys(st).sort(function (a, b) { return st[b] - st[a]; });
+  for (var i = 0; i < ks.length && left > 0; i++) { var t = Math.min(st[ks[i]], left); if (t > 0) { st[ks[i]] -= t; left -= t; whLogAdd(data, { type: 'use', partId: p.id, partName: p.name, qty: t, wh: ks[i], ref: ref || '', note: 'استخدام في طلب' }); } }
+  p.stock = st; p.qty = whTotal(p);
+}
+
+/* ---- العرض ---- */
+function whMount(el) { WH.root = el; whRender(); }
+function whOpenModal() { WH.tab = 'overview'; openModal('whModal'); whMount(whG('whModalBody')); }
+function whTab(t) { WH.tab = t; whRender(); }
+function whRender() {
+  var el = WH.root; if (!el) return;
+  var tabs = [['overview', '📊 نظرة عامة'], ['items', '📦 المخزون'], ['log', '🧾 الحركات']]; if (whMgr()) tabs.push(['whs', '🏬 المخازن']);
+  var body = WH.tab === 'items' ? whItemsView() : WH.tab === 'log' ? whLogView() : WH.tab === 'whs' && whMgr() ? whWhsView() : whOverview();
+  el.innerHTML = '<div class="wh-tabs">' + tabs.map(function (t) { return '<button type="button" class="wh-tab' + (WH.tab === t[0] ? ' on' : '') + '" onclick="whTab(\'' + t[0] + '\')">' + t[1] + '</button>'; }).join('') + '</div>' + body;
+  if (WH.tab === 'items') whDrawList(); if (WH.tab === 'log') whDrawLog();
+}
+function whOverview() {
+  var d = getData(), parts = d.parts || [], mgr = whMgr(), units = 0, val = 0, sale = 0;
+  parts.forEach(function (p) { var t = whTotal(p); units += t; val += t * (Number(p.cost) || 0); sale += t * (Number(p.price) || 0); });
+  var low = parts.filter(function (p) { return whState(p) === 'low'; }), zero = parts.filter(function (p) { return whState(p) === 'zero'; });
+  var sod = new Date(); sod.setHours(0, 0, 0, 0);
+  var today = (d.stockLog || []).filter(function (e) { return e.ts >= sod.getTime(); }).length;
+  var h = '<div class="wh-stats">' +
+    '<div class="wh-stat"><b>' + parts.length + '</b><span>عدد الأصناف</span></div>' +
+    '<div class="wh-stat"><b>' + whFmt(units) + '</b><span>إجمالي القطع</span></div>' +
+    '<div class="wh-stat warn"><b>' + low.length + '</b><span>أصناف قاربت على النفاد</span></div>' +
+    '<div class="wh-stat bad"><b>' + zero.length + '</b><span>أصناف نفدت</span></div>' +
+    '<div class="wh-stat"><b>' + today + '</b><span>حركات النهارده</span></div>' +
+    (mgr ? '<div class="wh-stat good"><b>' + whFmt(val) + '</b><span>قيمة المخزون (شراء) ج</span></div><div class="wh-stat good"><b>' + whFmt(sale) + '</b><span>قيمة البيع المتوقعة ج</span></div>' : '') + '</div>';
+  h += '<div class="wh-h">🏬 المخازن</div><div class="wh-whs">' + whList().map(function (w) {
+    var n = 0, u = 0, v = 0; parts.forEach(function (p) { var q = whAt(p, w.id); if (q > 0) { n++; u += q; v += q * (Number(p.cost) || 0); } });
+    return '<div class="wh-wcard"><b>' + wcEsc(w.name) + '</b><small>' + n + ' صنف · ' + whFmt(u) + ' قطعة' + (mgr ? '<br>القيمة: ' + whFmt(v) + ' ج' : '') + '</small></div>';
+  }).join('') + '</div>';
+  var need = zero.concat(low).slice(0, 8);
+  h += '<div class="wh-h">⚠️ محتاج توريد</div>' + (need.length ? need.map(function (p) {
+    return '<div class="wh-row"><div class="tx"><b>' + wcEsc(p.name) + '</b><small>المتاح ' + whFmt(whTotal(p)) + ' · الحد الأدنى ' + whFmt(p.min || 0) + '</small></div><button type="button" class="wh-btn in" onclick="whMove(\'in\',\'' + wcEsc(p.id) + '\')">⬇️ وارد</button></div>';
+  }).join('') : '<div class="wh-empty">كل الأصناف متوفرة ✅</div>');
+  var last = (d.stockLog || []).slice(-6).reverse();
+  h += '<div class="wh-h">🕒 آخر الحركات</div>' + (last.length ? last.map(whLogRow).join('') : '<div class="wh-empty">لا توجد حركات بعد</div>');
+  return h;
+}
+function whItemsView() {
+  var opts = '<option value="all">كل المخازن</option>' + whList().map(function (w) { return '<option value="' + wcEsc(w.id) + '"' + (WH.wh === w.id ? ' selected' : '') + '>' + wcEsc(w.name) + '</option>'; }).join('');
+  return '<div class="wh-bar"><input type="text" placeholder="🔎 ابحث بالاسم أو الكود أو التصنيف" value="' + wcEsc(WH.q) + '" oninput="WH.q=this.value;whDrawList()"><select onchange="WH.wh=this.value;whDrawList()">' + opts + '</select>' +
+    '<button type="button" class="wh-chip' + (WH.low ? ' on' : '') + '" onclick="WH.low=!WH.low;whRender()">⚠️ النواقص فقط</button></div>' +
+    '<div class="wh-bar">' + (whMgr() ? '<button type="button" class="wh-btn pr" onclick="whEditItem()">➕ صنف جديد</button>' : '') +
+    '<button type="button" class="wh-btn in" onclick="whMove(\'in\')">⬇️ وارد</button><button type="button" class="wh-btn out" onclick="whMove(\'out\')">⬆️ صرف</button><button type="button" class="wh-btn tr" onclick="whMove(\'transfer\')">🔁 تحويل</button></div>' +
+    '<div id="whList" class="wh-list"></div>';
+}
+function whDrawList() {
+  var box = whG('whList'); if (!box) return;
+  var q = WH.q.trim().toLowerCase(), mgr = whMgr();
+  var parts = (getData().parts || []).filter(function (p) {
+    if (q && (p.name + ' ' + (p.sku || '') + ' ' + (p.category || '')).toLowerCase().indexOf(q) < 0) return false;
+    if (WH.low && whState(p) === 'ok') return false;
+    return true;
+  }).sort(function (a, b) { return String(a.name).localeCompare(String(b.name), 'ar'); });
+  if (!parts.length) { box.innerHTML = '<div class="wh-empty" style="grid-column:1/-1">' + ((getData().parts || []).length ? 'لا توجد نتائج' : 'لا توجد أصناف بعد' + (mgr ? ' — اضغط «صنف جديد» للبدء' : '')) + '</div>'; return; }
+  box.innerHTML = parts.map(function (p) {
+    var st = whState(p), stn = whStock(p), id = wcEsc(p.id), sh = WH.wh !== 'all';
+    var chips = Object.keys(stn).filter(function (k) { return Number(stn[k]) > 0; }).map(function (k) { return '<i>' + wcEsc(whName(k)) + ': ' + whFmt(stn[k]) + '</i>'; }).join('');
+    return '<div class="wh-card ' + st + '"><div class="wh-top"><div><b>' + wcEsc(p.name) + '</b><small>' + wcEsc([p.sku, p.category].filter(Boolean).join(' · ') || '—') + '</small></div><span class="wh-badge ' + st + '">' + (st === 'ok' ? 'متوفر' : st === 'low' ? 'قليل' : 'نفد') + '</span></div>' +
+      '<div class="wh-qty"><strong>' + whFmt(whAt(p, WH.wh)) + '</strong><span>' + wcEsc(p.unit || 'قطعة') + '</span>' + (sh ? '<em>(الإجمالي ' + whFmt(whTotal(p)) + ')</em>' : '') + '</div>' +
+      (chips && !sh ? '<div class="wh-chips">' + chips + '</div>' : '') +
+      (mgr ? '<div class="wh-pr">شراء ' + whFmt(p.cost || 0) + ' ج · بيع ' + whFmt(p.price || 0) + ' ج · حد التنبيه ' + whFmt(p.min || 0) + '</div>' : '') +
+      '<div class="wh-acts"><button type="button" class="in" onclick="whMove(\'in\',\'' + id + '\')">⬇️ وارد</button><button type="button" class="out" onclick="whMove(\'out\',\'' + id + '\')">⬆️ صرف</button><button type="button" class="tr" onclick="whMove(\'transfer\',\'' + id + '\')">🔁</button><button type="button" class="ad" onclick="whMove(\'adjust\',\'' + id + '\')">⚖️</button>' +
+      (mgr ? '<button type="button" onclick="whEditItem(\'' + id + '\')">✏️</button><button type="button" onclick="whDelItem(\'' + id + '\')">🗑️</button>' : '') + '</div></div>';
+  }).join('');
+}
+function whLogRow(e) {
+  var t = WH_TYPES[e.type] || ['•', e.type], det;
+  if (e.type === 'transfer') det = whName(e.wh) + ' ← ' + whName(e.to).replace(/^/, '') ; else det = whName(e.wh);
+  if (e.type === 'transfer') det = 'من ' + whName(e.wh) + ' إلى ' + whName(e.to);
+  if (e.type === 'adjust') det += ' · من ' + whFmt(e.before) + ' إلى ' + whFmt(e.after);
+  var sign = e.type === 'in' ? '+' : (e.type === 'out' || e.type === 'use') ? '−' : e.type === 'adjust' ? '±' : '⇄';
+  return '<div class="wh-row t-' + e.type + '"><div class="ic">' + t[0] + '</div><div class="tx"><b>' + wcEsc(e.partName || '') + '</b><small>' + t[1] + ' · ' + wcEsc(det) + (e.ref ? ' · طلب ' + wcEsc(e.ref) : '') + '<br>' + wcEsc(e.by || '') + ' · ' + wcEsc(e.date || '') + (e.note ? ' · ' + wcEsc(e.note) : '') + '</small></div><div class="q">' + sign + whFmt(e.qty) + '</div></div>';
+}
+function whLogView() {
+  var chips = [['all', 'الكل'], ['in', '⬇️ وارد'], ['out', '⬆️ صرف'], ['transfer', '🔁 تحويل'], ['adjust', '⚖️ جرد'], ['use', '🔧 استخدام']].map(function (c) { return '<button type="button" class="wh-chip' + (WH.lt === c[0] ? ' on' : '') + '" onclick="WH.lt=\'' + c[0] + '\';whRender()">' + c[1] + '</button>'; }).join('');
+  return '<div class="wh-bar"><input type="text" placeholder="🔎 ابحث باسم الصنف أو الملاحظة" value="' + wcEsc(WH.lq) + '" oninput="WH.lq=this.value;whDrawLog()"><button type="button" class="wh-btn" onclick="whExport()">⬇️ تصدير CSV</button></div><div class="wh-bar">' + chips + '</div><div id="whLog"></div>';
+}
+function whLogFiltered() {
+  var q = WH.lq.trim().toLowerCase();
+  return (getData().stockLog || []).filter(function (e) { return (WH.lt === 'all' || e.type === WH.lt) && (!q || ((e.partName || '') + ' ' + (e.note || '') + ' ' + (e.ref || '')).toLowerCase().indexOf(q) >= 0); }).slice().reverse();
+}
+function whDrawLog() { var b = whG('whLog'); if (!b) return; var l = whLogFiltered().slice(0, 300); b.innerHTML = l.length ? l.map(whLogRow).join('') : '<div class="wh-empty">لا توجد حركات</div>'; }
+function whExport() {
+  var rows = [['التاريخ', 'النوع', 'الصنف', 'الكمية', 'من/المخزن', 'إلى', 'بواسطة', 'طلب', 'ملاحظة']].concat(whLogFiltered().map(function (e) { return [e.date, (WH_TYPES[e.type] || [0, e.type])[1], e.partName, e.qty, whName(e.wh), e.to ? whName(e.to) : '', e.by, e.ref || '', e.note || '']; }));
+  var csv = '\ufeff' + rows.map(function (r) { return r.map(function (c) { return '"' + String(c == null ? '' : c).replace(/"/g, '""') + '"'; }).join(','); }).join('\n');
+  try { var a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' })); a.download = 'stock-log.csv'; document.body.appendChild(a); a.click(); a.remove(); } catch (e) { showToast('❌ التصدير غير مدعوم هنا', 'error'); }
+}
+function whWhsView() {
+  var l = whList();
+  return '<div class="wh-h">🏬 مخازنك</div>' + l.map(function (w, i) {
+    return '<div class="wh-row"><div class="ic" style="background:rgba(59,130,246,.2)">🏬</div><input type="text" value="' + wcEsc(w.name) + '" onchange="whRename(\'' + wcEsc(w.id) + '\',this.value)"><button type="button" class="wh-btn out" onclick="whDelWh(\'' + wcEsc(w.id) + '\')"' + (l.length < 2 ? ' disabled style="opacity:.4"' : '') + '>🗑️</button></div>';
+  }).join('') + '<div class="wh-h">➕ إضافة مخزن</div><div class="wh-bar"><input type="text" id="whNewName" placeholder="اسم المخزن (مثلاً: مخزن الفرع / سيارة الفني)"><button type="button" class="wh-btn pr" onclick="whAddWh()">إضافة</button></div>';
+}
+function whSaveWhs(list) { var d = getData(); d.settings = d.settings || {}; d.settings.warehouses = list; saveData(d); whRender(); }
+function whAddWh() { var n = whG('whNewName').value.trim(); if (!n) { showToast('⚠️ اكتب اسم المخزن', 'warning'); return; } var l = whList().slice(); l.push({ id: 'wh' + Date.now().toString(36), name: n }); whSaveWhs(l); addLog('أضاف ' + currentUser.username + ' مخزن: ' + n); }
+function whRename(id, v) { v = v.trim(); if (!v) return; whSaveWhs(whList().map(function (w) { return w.id === id ? { id: w.id, name: v } : w; })); }
+async function whDelWh(id) {
+  var l = whList(); if (l.length < 2) return;
+  var used = (getData().parts || []).some(function (p) { return whAt(p, id) > 0; });
+  if (used) { showToast('❌ المخزن فيه أصناف، حوّلها لمخزن تاني الأول', 'error', 6000); return; }
+  if (!(await holdConfirm('🗑️ حذف المخزن «' + whName(id) + '»؟'))) return;
+  whSaveWhs(l.filter(function (w) { return w.id !== id; }));
+}
+
+/* ---- الأصناف ---- */
+function whEditItem(id) {
+  var p = id ? (getData().parts || []).find(function (x) { return x.id === id; }) : null;
+  whG('whiTitle').textContent = p ? '✏️ تعديل صنف' : '➕ صنف جديد';
+  whG('whiId').value = p ? p.id : '';
+  whG('whiName').value = p ? p.name : ''; whG('whiSku').value = p ? (p.sku || '') : ''; whG('whiCat').value = p ? (p.category || '') : '';
+  whG('whiUnit').value = p ? (p.unit || 'قطعة') : 'قطعة';
+  whG('whiMin').value = p ? (p.min || 0) : ''; whG('whiCost').value = p ? (p.cost || 0) : ''; whG('whiPrice').value = p ? (p.price || 0) : '';
+  whG('whiQty').value = ''; whG('whiQtyWrap').style.display = p ? 'none' : '';
+  whG('whiWh').innerHTML = whList().map(function (w) { return '<option value="' + wcEsc(w.id) + '">' + wcEsc(w.name) + '</option>'; }).join('');
+  openModal('whItemModal');
+}
+function whSaveItem() {
+  var name = whG('whiName').value.trim(); if (!name) { showToast('⚠️ اكتب اسم الصنف', 'warning'); return; }
+  var d = getData(); if (!d.parts) d.parts = [];
+  var f = { name: name, sku: whG('whiSku').value.trim(), category: whG('whiCat').value.trim(), unit: whG('whiUnit').value, min: Math.max(0, Number(whG('whiMin').value) || 0), cost: Math.max(0, Number(whG('whiCost').value) || 0), price: Math.max(0, Number(whG('whiPrice').value) || 0) };
+  var id = whG('whiId').value;
+  if (id) { var p = d.parts.find(function (x) { return x.id === id; }); if (!p) return; Object.assign(p, f); addLog('عدّل ' + currentUser.username + ' الصنف: ' + name); }
+  else {
+    var q = Math.max(0, Number(whG('whiQty').value) || 0), w = whG('whiWh').value, st = {}; st[w] = q;
+    var np = Object.assign({ id: generateId(), qty: q, stock: st }, f); d.parts.push(np);
+    if (q > 0) whLogAdd(d, { type: 'in', partId: np.id, partName: name, qty: q, wh: w, note: 'رصيد افتتاحي', cost: f.cost || undefined });
+    addLog('أضاف ' + currentUser.username + ' صنف مخزن: ' + name);
+  }
+  saveData(d); closeModal('whItemModal'); whRender(); if (typeof updateAlertsBadge === 'function') updateAlertsBadge();
+}
+async function whDelItem(id) {
+  var d = getData(), p = (d.parts || []).find(function (x) { return x.id === id; }); if (!p) return;
+  if (!(await holdConfirm('🗑️ حذف الصنف «' + p.name + '» نهائياً؟'))) return;
+  d.parts = d.parts.filter(function (x) { return x.id !== id; }); saveData(d); addLog('حذف ' + currentUser.username + ' الصنف: ' + p.name); whRender();
+}
+
+/* ---- الحركات ---- */
+function whMove(type, id) {
+  var parts = (getData().parts || []).slice().sort(function (a, b) { return String(a.name).localeCompare(String(b.name), 'ar'); });
+  if (!parts.length) { showToast('⚠️ ضيف أصناف الأول', 'warning'); return; }
+  whG('whmItem').innerHTML = parts.map(function (p) { return '<option value="' + wcEsc(p.id) + '">' + wcEsc(p.name) + (p.sku ? ' (' + wcEsc(p.sku) + ')' : '') + '</option>'; }).join('');
+  if (id) whG('whmItem').value = id;
+  var wo = whList().map(function (w) { return '<option value="' + wcEsc(w.id) + '">' + wcEsc(w.name) + '</option>'; }).join('');
+  whG('whmFrom').innerHTML = wo; whG('whmTo').innerHTML = wo;
+  if (whList().length > 1) whG('whmTo').selectedIndex = 1;
+  if (WH.wh !== 'all') whG('whmFrom').value = WH.wh;
+  whG('whmQty').value = ''; whG('whmCost').value = ''; whG('whmNote').value = '';
+  whSetType(type || 'in'); openModal('whMoveModal');
+}
+function whSetType(t) {
+  WH.mt = t;
+  [].forEach.call(whG('whmTypes').children, function (b) { b.classList.toggle('on', b.dataset.t === t); });
+  whG('whmTitle').textContent = { in: '⬇️ وارد للمخزن', out: '⬆️ صرف من المخزن', transfer: '🔁 تحويل بين المخازن', adjust: '⚖️ جرد وتسوية' }[t];
+  whG('whmFromLbl').textContent = t === 'transfer' ? 'من مخزن' : 'المخزن';
+  whG('whmToWrap').style.display = t === 'transfer' ? '' : 'none';
+  whG('whmQtyLbl').textContent = t === 'adjust' ? 'الكمية الفعلية بعد الجرد' : 'الكمية';
+  whG('whmCostWrap').style.display = (t === 'in' && whMgr()) ? '' : 'none';
+  whmInfo();
+}
+function whmInfo() {
+  var p = (getData().parts || []).find(function (x) { return x.id === whG('whmItem').value; }), el = whG('whmInfo'); if (!p) { el.textContent = ''; return; }
+  el.textContent = 'المتاح في «' + whName(whG('whmFrom').value) + '»: ' + whFmt(whAt(p, whG('whmFrom').value)) + ' ' + (p.unit || 'قطعة') + ' · الإجمالي: ' + whFmt(whTotal(p));
+}
+function whDoMove() {
+  var d = getData(), t = WH.mt, p = (d.parts || []).find(function (x) { return x.id === whG('whmItem').value; });
+  if (!p) { showToast('⚠️ اختار الصنف', 'warning'); return; }
+  var q = Number(whG('whmQty').value), from = whG('whmFrom').value, to = whG('whmTo').value, note = whG('whmNote').value.trim();
+  var st = Object.assign({}, whStock(p)), cur = Number(st[from]) || 0, e;
+  if (t === 'adjust') {
+    if (whG('whmQty').value === '' || isNaN(q) || q < 0) { showToast('⚠️ اكتب الكمية الفعلية', 'warning'); return; }
+    e = { type: 'adjust', partId: p.id, partName: p.name, qty: Math.abs(q - cur), wh: from, before: cur, after: q, note: note }; st[from] = q;
+  } else {
+    if (!(q > 0)) { showToast('⚠️ اكتب كمية صحيحة', 'warning'); return; }
+    if (t === 'in') {
+      e = { type: 'in', partId: p.id, partName: p.name, qty: q, wh: from, note: note }; st[from] = cur + q;
+      var c = Number(whG('whmCost').value);
+      if (whMgr() && c > 0) { var tot = whTotal(p); p.cost = Math.round(((tot * (Number(p.cost) || 0) + q * c) / (tot + q)) * 100) / 100; e.cost = c; }
+    } else if (t === 'out') {
+      if (q > cur) { showToast('❌ المتاح في المخزن ' + whFmt(cur) + ' بس', 'error'); return; }
+      e = { type: 'out', partId: p.id, partName: p.name, qty: q, wh: from, note: note }; st[from] = cur - q;
+    } else {
+      if (from === to) { showToast('⚠️ اختار مخزنين مختلفين', 'warning'); return; }
+      if (q > cur) { showToast('❌ المتاح في المخزن ' + whFmt(cur) + ' بس', 'error'); return; }
+      e = { type: 'transfer', partId: p.id, partName: p.name, qty: q, wh: from, to: to, note: note }; st[from] = cur - q; st[to] = (Number(st[to]) || 0) + q;
+    }
+  }
+  p.stock = st; p.qty = whTotal(p); whLogAdd(d, e);
+  saveData(d); closeModal('whMoveModal'); whRender();
+  showToast('✅ تم تسجيل ' + WH_TYPES[t][1] + ' — ' + p.name, 'success');
+  if (whState(p) !== 'ok') showToast('⚠️ مخزون ' + p.name + ' ' + (whState(p) === 'zero' ? 'نفد' : 'قليل (' + whFmt(whTotal(p)) + ')'), 'warning', 6000);
+  if (typeof updateAlertsBadge === 'function') updateAlertsBadge();
+}
+(function () {
+  var _r = window.refreshCurrentView;
+  if (typeof _r === 'function') window.refreshCurrentView = function () {
+    var r = _r.apply(this, arguments);
+    try {
+      var a = document.activeElement, typing = a && WH.root && WH.root.contains(a) && /INPUT|SELECT|TEXTAREA/.test(a.tagName);
+      if (WH.root && WH.root.offsetParent !== null && !typing && !document.querySelector('#whMoveModal.active,#whItemModal.active')) whRender();
+    } catch (e) {}
+    return r;
+  };
+})();
+</script>
+
 <!-- ===== Wasla Mobile App Layer: واجهة تطبيق للموبايل (شريط علوي + قائمة سفلية + نوافذ منزلقة) ===== -->
 <style id="wm-style">
 @media (max-width: 768px) {
@@ -7146,7 +7458,7 @@ function gateGo(reg){
   function buzz() { try { navigator.vibrate && navigator.vibrate(8); } catch (e) {} }
   var TITLES = { client: 'لوحة العميل', cashier: 'لوحة الكاشير', technician: 'لوحة الفني', manager: 'لوحة المدير' };
   var ROLE_AR = { client: 'عميل', cashier: 'كاشير', technician: 'فني صيانة', manager: 'مدير' };
-  var MTABS = { 'manager-dashboard': 'لوحة التحكم', 'manager-requests': 'الطلبات', 'manager-users': 'المستخدمين', 'manager-chats': 'المحادثات', 'manager-ratings': 'التقييمات', 'manager-logs': 'السجل', 'manager-alerts': 'التنبيهات', 'manager-reports': 'التقارير', 'manager-parts': 'قطع الغيار', 'manager-settings': 'الإعدادات' };
+  var MTABS = { 'manager-dashboard': 'لوحة التحكم', 'manager-requests': 'الطلبات', 'manager-users': 'المستخدمين', 'manager-chats': 'المحادثات', 'manager-ratings': 'التقييمات', 'manager-logs': 'السجل', 'manager-alerts': 'التنبيهات', 'manager-reports': 'التقارير', 'manager-parts': 'قطع الغيار', 'manager-warehouses': 'المخازن', 'manager-settings': 'الإعدادات' };
 
   function items(r) {
     var T = function (id) { return function () { call('switchManagerTab', id); top(); }; };
@@ -7229,10 +7541,11 @@ function gateGo(reg){
     var u = (typeof currentUser !== 'undefined' && currentUser) || {};
     var h = '<div class="m-me"><div class="m-av2">' + ((u.username || 'W').trim().charAt(0).toUpperCase()) + '</div><div><b>' + esc(u.username || '') + '</b><small>' + (ROLE_AR[curRole] || '') + (u.phone ? ' · ' + esc(u.phone) : '') + '</small></div></div>';
     if (curRole === 'manager') {
-      var extra = [['manager-chats', '💬', 'المحادثات'], ['manager-ratings', '⭐', 'التقييمات'], ['manager-logs', '📝', 'السجل'], ['manager-reports', '📊', 'التقارير'], ['manager-parts', '🔩', 'قطع الغيار'], ['manager-settings', '⚙️', 'الإعدادات']];
+      var extra = [['manager-chats', '💬', 'المحادثات'], ['manager-ratings', '⭐', 'التقييمات'], ['manager-logs', '📝', 'السجل'], ['manager-reports', '📊', 'التقارير'], ['manager-parts', '🔩', 'قطع الغيار'], ['manager-warehouses', '🏬', 'المخازن'], ['manager-settings', '⚙️', 'الإعدادات']];
       h += '<div class="m-sec">الأقسام</div><div class="m-grid">' + extra.map(function (e) { return '<button class="m-tile" data-tab="' + e[0] + '"><span class="e">' + e[1] + '</span>' + e[2] + '</button>'; }).join('') + '</div>';
     }
     var dark = !document.documentElement.classList.contains('w-light');
+    if (curRole === 'cashier') h += '<div class="m-sec">الأدوات</div><button class="m-row" data-a="wh"><span>🏬</span>إدارة المخازن</button>';
     h += '<div class="m-sec">الحساب</div>' +
       '<button class="m-row" data-a="search"><span>🔎</span>بحث سريع</button>' +
       '<button class="m-row" data-a="theme"><span>' + (dark ? '☀️' : '🌙') + '</span>' + (dark ? 'الوضع الفاتح' : 'الوضع الداكن') + '</button>' +
@@ -7252,6 +7565,7 @@ function gateGo(reg){
     var a = t.dataset.a; closeSheet();
     if (a === 'theme') { var b = $('wThemeBtn'); if (b) b.click(); }
     else if (a === 'search') { var s = $('wSearchBtn'); if (s) s.click(); }
+    else if (a === 'wh') call('whOpenModal');
     else if (a === 'pw') call('openPasswordModal', false);
     else if (a === 'out') call('logout');
   });
