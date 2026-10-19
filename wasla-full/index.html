@@ -7689,5 +7689,81 @@ function whDoMove() {
     if (!standalone && /Android/i.test(navigator.userAgent)) btn.style.display = 'block';
 })();
 </script>
+<button id="botFab" aria-label="مساعد وصلة" style="position:fixed;bottom:calc(88px + env(safe-area-inset-bottom,0px));inset-inline-end:14px;z-index:9997;width:54px;height:54px;border:0;border-radius:50%;background:#e74c3c;color:#fff;font-size:26px;box-shadow:0 4px 16px rgba(0,0,0,.45);cursor:pointer;">🤖</button>
+<div id="botBox" style="display:none;position:fixed;bottom:calc(88px + env(safe-area-inset-bottom,0px));inset-inline-end:14px;z-index:9997;width:min(340px,calc(100vw - 28px));height:min(460px,70vh);background:#10162a;color:#ccd6f6;border:1px solid #2a3355;border-radius:16px;box-shadow:0 8px 28px rgba(0,0,0,.55);flex-direction:column;overflow:hidden;direction:rtl;">
+<div style="padding:10px 14px;background:#1a2140;display:flex;justify-content:space-between;align-items:center;font-weight:700;"><span>🤖 مساعد وصلة</span><button id="botX" style="background:none;border:0;color:#ccd6f6;font-size:18px;cursor:pointer">✕</button></div>
+<div id="botMsgs" style="flex:1;overflow-y:auto;padding:10px;display:flex;flex-direction:column;gap:8px;font-size:14px;"></div>
+<div id="botChips" style="padding:4px 10px;display:flex;gap:6px;flex-wrap:wrap;"></div>
+<div style="display:flex;gap:6px;padding:8px;border-top:1px solid #2a3355;"><input id="botIn" placeholder="اكتب سؤالك..." style="flex:1;padding:9px 12px;border-radius:18px;border:1px solid #2a3355;background:#0b0e1a;color:#ccd6f6;font-size:14px;"><button id="botSend" style="border:0;border-radius:18px;background:#22c55e;color:#fff;padding:0 14px;font-weight:700;cursor:pointer">إرسال</button></div>
+</div>
+<script>
+/* ===== مساعد وصلة (بوت بردود جاهزة) ===== */
+(function () {
+    /* ✏️ عدّل الردود دي بمعلومات المحل الحقيقية */
+    var BOT = {
+        phone: '01001234567',
+        hours: 'مواعيدنا من السبت للخميس، من 10 صباحاً لـ 9 مساءً. الجمعة إجازة.',
+        address: 'عنوان المحل: (اكتب العنوان هنا).',
+        warranty: 'كل صيانة عليها ضمان حسب نوع الشغل، والمدة بتتكتب في الفاتورة.',
+        prices: 'الأسعار بتختلف حسب العطل والقطع المطلوبة. الفحص بيحدد السعر، وبنبعتلك عرض سعر وتوافق عليه قبل ما نبدأ.',
+        services: 'بنصلّح: كمبيوتر ولابتوب، تكييفات، ثلاجات، شاشات، سخانات، كاميرات مراقبة، شبكات، وغيرهم.'
+    };
+    var $ = function (i) { return document.getElementById(i); };
+    var fab = $('botFab'), box = $('botBox'), msgs = $('botMsgs'), inp = $('botIn'), chips = $('botChips'), waiting = false, started = false;
+    function add(txt, me) {
+        var d = document.createElement('div'); d.textContent = txt;
+        d.style.cssText = 'max-width:85%;padding:8px 12px;border-radius:14px;white-space:pre-line;line-height:1.6;' + (me ? 'align-self:flex-start;background:#22c55e;color:#fff;' : 'align-self:flex-end;background:#1f2a50;');
+        msgs.appendChild(d); msgs.scrollTop = msgs.scrollHeight;
+    }
+    function setChips(list) {
+        chips.innerHTML = '';
+        list.forEach(function (t) { var b = document.createElement('button'); b.textContent = t; b.style.cssText = 'border:1px solid #2a3355;background:#1a2140;color:#ccd6f6;border-radius:14px;padding:5px 10px;font-size:12px;cursor:pointer'; b.onclick = function () { ask(t); }; chips.appendChild(b); });
+    }
+    var MENU = ['حالة جهازي', 'الأسعار', 'المواعيد', 'العنوان', 'الضمان', 'رقم التواصل'];
+    function norm(t) {
+        return String(t || '').replace(/[\u064B-\u0652\u0640]/g, '').replace(/[أإآ]/g, 'ا').replace(/ة/g, 'ه').replace(/ى/g, 'ي').replace(/[\u0660-\u0669]/g, function (c) { return c.charCodeAt(0) - 0x660; }).toLowerCase();
+    }
+    function has(t, words) { return words.some(function (w) { return t.indexOf(w) > -1; }); }
+    async function track(q) {
+        add('⏳ بدوّر على طلبك...');
+        try {
+            var res = await fetch('/api/track?' + new URLSearchParams(q)), data = await res.json();
+            msgs.lastChild.remove();
+            if (!res.ok) { add('❌ ' + (data.error || 'مش لاقي طلب بالبيانات دي. اتأكد من رقم الوصل أو رقم الموبايل.')); return; }
+            if (data.list) {
+                if (!data.list.length) { add('❌ مفيش طلبات على الرقم ده.'); return; }
+                add('لقيت ' + data.list.length + ' طلب:\n' + data.list.slice(0, 5).map(function (b) { return '• ' + (b.deviceType || 'جهاز') + ' (' + b.id + ') — ' + b.progress + '%'; }).join('\n') + '\n\nاكتب رقم الوصل لتفاصيل طلب معين.');
+                return;
+            }
+            var r = data.request, st = (typeof STATUS_AR !== 'undefined' && STATUS_AR[r.status]) || r.status;
+            add('📦 ' + (r.deviceType || 'جهازك') + '\nالحالة: ' + st + '\nنسبة الصيانة: ' + (r.progress || 0) + '%' + (r.eta ? '\nالموعد المتوقع: ' + r.eta : '') + (r.status === 'ready_for_pickup' ? '\n\n✅ جهازك جاهز، تقدر تيجي تستلمه.' : ''));
+        } catch (e) { msgs.lastChild && msgs.lastChild.remove(); add('⚠️ تعذر الاتصال بالسيرفر. حاول تاني أو كلمنا على ' + BOT.phone); }
+    }
+    function ask(text) {
+        text = String(text || '').trim(); if (!text) return;
+        add(text, true); inp.value = '';
+        var raw = String(text).replace(/[\u0660-\u0669]/g, function (c) { return c.charCodeAt(0) - 0x660; }), t = norm(text);
+        var ph = raw.match(/01\d{9}/);
+        if (ph) { waiting = false; return track({ phone: ph[0] }); }
+        var idm = raw.match(/[A-Za-z0-9_-]*\d{3,}[A-Za-z0-9_-]*/);
+        if (idm && (waiting || has(t, ['وصل', 'طلب', 'رقم']) || /^[A-Za-z0-9_-]+$/.test(raw.trim()))) { waiting = false; return track({ id: idm[0] }); }
+        if (has(t, ['حاله', 'جهازي', 'طلبي', 'وصل جهاز', 'خلص', 'جاهز', 'فين جهاز', 'اتصلح'])) { waiting = true; add('اكتب رقم الوصل بتاع جهازك، أو رقم موبايلك المسجل عندنا، وهقولك حالته.'); return; }
+        if (has(t, ['سعر', 'اسعار', 'بكام', 'تكلف', 'كام الفحص', 'فلوس'])) return add(BOT.prices);
+        if (has(t, ['ميعاد', 'مواعيد', 'ساعات', 'تفتح', 'بتفتح', 'تقفل', 'فاتح', 'اجازه'])) return add(BOT.hours);
+        if (has(t, ['عنوان', 'مكان', 'لوكيشن', 'فين المحل', 'فين فرعكم', 'فرع'])) return add(BOT.address);
+        if (has(t, ['ضمان'])) return add(BOT.warranty);
+        if (has(t, ['خدم', 'بتصلحوا', 'بتصلح', 'صيانه'])) return add(BOT.services);
+        if (has(t, ['رقم', 'تليفون', 'واتس', 'اتصل', 'كلم', 'موظف', 'مدير'])) return add('تقدر تكلمنا على: ' + BOT.phone);
+        if (has(t, ['شكرا', 'تسلم', 'متشكر'])) return add('العفو! 🙏 لو محتاج حاجة تانية أنا موجود.');
+        if (has(t, ['سلام', 'اهلا', 'مرحبا', 'هاي', 'ازيك', 'صباح', 'مساء'])) return add('أهلاً بيك في وصلة 👋 أقدر أساعدك في إيه؟');
+        add('مش متأكد فهمتك 🤔 اختار من الأسئلة اللي تحت، أو كلمنا على ' + BOT.phone);
+    }
+    function open() { box.style.display = 'flex'; fab.style.display = 'none'; if (!started) { started = true; add('أهلاً بيك في وصلة 👋\nأقدر أجاوب على حالة جهازك، الأسعار، المواعيد، والعنوان.'); setChips(MENU); } setTimeout(function () { inp.focus(); }, 100); }
+    fab.onclick = open;
+    $('botX').onclick = function () { box.style.display = 'none'; fab.style.display = 'block'; };
+    $('botSend').onclick = function () { ask(inp.value); };
+    inp.addEventListener('keydown', function (e) { if (e.key === 'Enter') ask(inp.value); });
+})();
+</script>
 </body>
 </html>
