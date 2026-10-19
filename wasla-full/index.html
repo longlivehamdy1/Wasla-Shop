@@ -23,13 +23,6 @@
     <script defer src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <!-- jsQR لمسح وقراءة QR Code بالكاميرا -->
     <script defer src="https://cdnjs.cloudflare.com/ajax/libs/jsqr/1.4.0/jsQR.js"></script>
-    <!-- Lenis: سكرول ناعم -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/lenis@1.3.26/dist/lenis.css">
-    <script src="https://cdn.jsdelivr.net/npm/lenis@1.3.26/dist/lenis.min.js"></script>
-    <!-- GSAP: حركات الواجهة -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.4/gsap.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.4/ScrollTrigger.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.4/Flip.min.js"></script>
     <style>
         /* GSAP بيتولى الحركة بدل CSS عشان ميحصلش تضارب */
         html.gsap-on .tab-content.active { animation: none; }
@@ -7694,54 +7687,6 @@ function whDoMove() {
     var btn = document.getElementById('apkBtn');
     var standalone = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone || /wv|TWA/i.test(navigator.userAgent) || document.referrer.indexOf('android-app://') === 0;
     if (!standalone && /Android/i.test(navigator.userAgent)) btn.style.display = 'block';
-})();
-</script>
-<button id="langBtn" onclick="waslaToggleLang()" style="position:fixed;top:calc(10px + env(safe-area-inset-top,0px));left:10px;z-index:9998;padding:6px 12px;border:0;border-radius:18px;background:#334155;color:#fff;font-weight:700;font-size:13px;cursor:pointer;opacity:.9;">EN</button>
-<script>
-/* ===== تبديل اللغة عربي / English ===== */
-(function () {
-    var D = {"حفظ": "Save", "كاميرات مراقبة": "CCTV Cameras", "جاهز للاستلام": "Ready for pickup", "فتح الشات": "Open chat", "تحديث": "Refresh", "طباعة": "Print", "بصمة حضور وانصراف": "Attendance Fingerprint", "بوابات إلكترونية": "Electronic Gates", "إنذار حريق": "Fire Alarm", "سنترالات": "PBX Systems", "دش مركزي": "Central Satellite", "شبكات وإنترنت": "Networks & Internet", "أنظمة صوت": "Sound Systems", "GPS للسيارات": "Car GPS", "نقاط بيع وكاشير": "POS & Cashier", "تكييفات": "Air Conditioners", "ثلاجات وفريزرات": "Fridges & Freezers", "سخانات": "Water Heaters", "بوتاجازات": "Cookers", "شاشات وتلفزيونات": "Screens & TVs", "سباكة عامة": "General Plumbing", "كهرباء منازل": "Home Electrical", "أثاث منزلي": "Home Furniture", "صيانة كمبيوتر": "Computer Repair", "صيانة لابتوب": "Laptop Repair", "تسجيل الدخول": "Log in", "تم التسليم": "Delivered", "إجمالي الطلبات": "Total orders", "قيد الانتظار": "Pending", "استلمه الكاشير": "Received by cashier", "في المخزن": "In warehouse", "متوسط الصيانة": "Avg. maintenance", "متوسط التقييم": "Avg. rating", "مكتمل الصيانة": "Repair complete", "تحديث نسبة الصيانة": "Update repair progress", "بحث": "Search", "كلمة المرور": "Password", "خروج": "Logout", "جاري التنفيذ...": "In progress...", "نظام ذكي لإدارة الصيانة والطلبات": "Smart repair & order management", "وصلة بتتولى لك": "Wasla takes care of it", "تتبع جهازك برقم الوصل (بدون حساب)": "Track your device by receipt number (no account)", "أدخل اسم المستخدم": "Enter username", "أو": "or", "رقم الموبايل": "Mobile number", "تذكرني": "Remember me", "نسيت كلمة المرور؟": "Forgot password?", "مش عندك حساب؟": "No account?", "إنشاء حساب جديد": "Create new account", "إنشاء حساب": "Create account", "رقم الموبايل إجباري": "Mobile number is required", "إضافة عميل جديد": "Add new client", "عندك حساب بالفعل؟": "Already have an account?", "اطلب خدمتك": "Request your service", "خدماتنا في مكان واحد": "Our services in one place", "إزاي بتتابع جهازك؟": "How do you track your device?", "استلام الجهاز": "Device received", "الكاشير يسجّل الجهاز ويديك رقم الوصل.": "The cashier registers your device and gives you a receipt number.", "الفحص والقبول": "Inspection & approval", "المدير يراجع الطلب ويحوّله للمخزن.": "The manager reviews the order and sends it to the warehouse.", "الصيانة": "Repair", "الفني ينفّذ الشغل وتقدر تكلّمه من الشات.": "The technician does the work and you can chat with them.", "بيوصلك إشعار أول ما الجهاز يخلص.": "You get a notification as soon as it's done.", "تستلم جهازك وتقيّم الخدمة.": "Pick up your device and rate the service.", "جاهز تبدأ؟": "Ready to start?", "ارجع لتسجيل الدخول": "Back to log in", "تنبيه:": "Note:", "تفعيل الإشعارات": "Enable notifications", "لوحة العميل": "Client Panel", "اختار القسم اللي محتاجه": "Choose the section you need", "طلب تسليم جهاز": "Device drop-off request", "طلب جديد": "New request", "طلباتي": "My orders", "عرض": "View", "التواصل مع الكاشير": "Contact cashier", "تقييم الخدمة": "Rate the service", "تقييم": "Rating", "نقاط الولاء": "Loyalty points", "كل طلب تستلمه يضيفلك نقاط": "Every order you collect earns you points", "لوحة الكاشير": "Cashier Panel", "استلام جهاز": "Receive device", "استلام": "Receive", "طباعة إيصال": "Print receipt", "إدارة المخازن": "Warehouse management", "فتح المخازن": "Open warehouses", "الشات مع العملاء": "Chat with clients", "لوحة الفني": "Technician Panel", "الأجهزة المرسلة لي": "Devices assigned to me", "تحديث القائمة": "Refresh list", "الشات مع الكاشير": "Chat with cashier", "لوحة المدير": "Manager Panel", "لوحة التحكم": "Dashboard", "الطلبات": "Orders", "المستخدمين": "Users", "المحادثات": "Chats", "التقييمات": "Ratings", "السجل": "Log", "التنبيهات": "Alerts", "التقارير": "Reports", "المصروفات والوردية": "Expenses & Shift", "قطع الغيار": "Spare parts", "المخازن": "Warehouses", "الإعدادات": "Settings", "طلبات عاجلة": "Urgent orders", "توزيع حالات الطلبات": "Order status distribution", "تقدم الصيانة": "Repair progress", "إضافة مستخدم جديد": "Add new user", "عميل": "Client", "كاشير": "Cashier", "فني صيانة": "Technician", "مدير": "Manager", "عميل عادي": "Regular client", "عميل حكومي": "Government client", "إضافة المستخدم": "Add user", "قائمة المستخدمين": "Users list", "جميع النشاطات في النظام": "All system activity", "مسح السجل": "Clear log", "رقم التواصل": "Contact number", "إعدادات البريد الإلكتروني": "Email settings", "عند إنشاء طلب": "When an order is created", "عند تحديث الصيانة": "When repair is updated", "عند اكتمال الصيانة": "When repair is completed", "حفظ إعدادات البريد": "Save email settings", "الضمان والتنبيهات": "Warranty & alerts", "مدة الضمان الافتراضية (يوم)": "Default warranty (days)", "تنبيه لو الجهاز جاهز ولم يُستلم من (يوم)": "Alert if device is ready but not collected for (days)", "نظام النقاط والولاء": "Points & loyalty system", "تحديث رصيد العميل": "Update client balance", "لون التطبيق": "App color", "اختيار شخصي على جهازك بس.": "Personal choice on your device only.", "النسخ الاحتياطي التلقائي": "Automatic backup", "بتتعمل نسخة كل يوم تلقائي (آخر 30 يوم).": "A backup is made daily (last 30 days).", "نسخة احتياطية الآن": "Backup now", "أدوات النظام": "System tools", "إعادة ضبط النظام": "Reset system", "تصدير جميع البيانات": "Export all data", "استيراد بيانات": "Import data", "صفحتنا على فيسبوك": "Our Facebook page", "© 2026 Wasla - جميع الحقوق محفوظة": "© 2026 Wasla - All rights reserved", "اختر التقييم:": "Choose a rating:", "لم يتم التقييم": "Not rated", "إرسال التقييم": "Submit rating", "مركز المحادثات": "Chat center", "-- اختر العميل --": "-- Select client --", "لا توجد رسائل بعد": "No messages yet", "إرسال": "Send", "جميع المحادثات": "All chats", "القسم:": "Section:", "نوع الجهاز / الخدمة:": "Device / service type:", "عادي": "Normal", "متوسط": "Medium", "عاجل": "Urgent", "صور الجهاز / المشكلة:": "Device / problem photos:", "اضغط لرفع صورة للجهاز": "Tap to upload a device photo", "إرسال الطلب": "Submit request", "تصوير السيريال نمبر": "Scan serial number", "التقاط": "Capture", "إيقاف": "Stop", "إعادة التشغيل": "Restart", "النص المستخرج:": "Extracted text:", "استخدام هذا النص": "Use this text", "السيريال نمبر:": "Serial number:", "تصوير": "Scan", "تأكيد الاستلام": "Confirm receipt", "اسم المستخدم": "Username", "البريد الإلكتروني": "Email", "إلغاء": "Cancel", "تأكيد": "Confirm", "حذف": "Delete", "تعديل": "Edit", "إغلاق": "Close", "رجوع": "Back", "التالي": "Next", "نعم": "Yes", "لا": "No"};
-    var lang = 'ar'; try { lang = localStorage.getItem('wasla_lang') || 'ar'; } catch (e) {}
-    var orig = new WeakMap(), busy = false;
-    var LEAD = /^[^\u0600-\u06FFA-Za-z0-9]+/;
-    function tr(str) {
-        var t = str.trim(); if (!t) return null;
-        if (D[t]) return str.replace(t, D[t]);
-        var m = t.match(LEAD), pre = m ? m[0] : '', rest = t.slice(pre.length).trim();
-        if (rest && D[rest]) return str.replace(t, pre + D[rest]);
-        return null;
-    }
-    function node(n) {
-        if (n.nodeType === 3) {
-            if (!n.parentNode || /^(SCRIPT|STYLE|TEXTAREA)$/.test(n.parentNode.nodeName)) return;
-            var o = orig.get(n);
-            if (lang === 'en') { var r = tr(o !== undefined && n.nodeValue === o.en ? o.ar : n.nodeValue); if (r !== null) { if (o === undefined || n.nodeValue !== o.en) orig.set(n, { ar: n.nodeValue, en: r }); n.nodeValue = r; } }
-            else if (o !== undefined && n.nodeValue === o.en) n.nodeValue = o.ar;
-        } else if (n.nodeType === 1) {
-            if (/^(SCRIPT|STYLE)$/.test(n.nodeName)) return;
-            ['placeholder', 'title'].forEach(function (a) {
-                if (!n.hasAttribute(a)) return;
-                var k = '__' + a, v = n.getAttribute(a);
-                if (lang === 'en') { var r = tr(v); if (r !== null) { n[k] = v; n.setAttribute(a, r); } }
-                else if (n[k] !== undefined) { n.setAttribute(a, n[k]); n[k] = undefined; }
-            });
-            for (var c = n.firstChild; c; c = c.nextSibling) node(c);
-        }
-    }
-    function apply() {
-        busy = true;
-        document.documentElement.lang = lang; document.documentElement.dir = lang === 'en' ? 'ltr' : 'rtl';
-        node(document.body);
-        var b = document.getElementById('langBtn'); if (b) b.textContent = lang === 'en' ? 'عربي' : 'EN';
-        busy = false;
-    }
-    window.waslaToggleLang = function () { lang = lang === 'en' ? 'ar' : 'en'; try { localStorage.setItem('wasla_lang', lang); } catch (e) {} apply(); };
-    new MutationObserver(function (ms) {
-        if (busy || lang !== 'en') return; busy = true;
-        ms.forEach(function (m) { if (m.type === 'childList') m.addedNodes.forEach(node); else if (m.type === 'characterData') node(m.target); });
-        busy = false;
-    }).observe(document.body, { childList: true, subtree: true, characterData: true });
-    if (lang === 'en') apply();
 })();
 </script>
 </body>
