@@ -1,0 +1,14 @@
+[
+  {
+    "relation": [
+      "delegate_permission/common.handle_all_urls"
+    ],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "app.vercel.wasla_shop.twa",
+      "sha256_cert_fingerprints": [
+        "DC:B5:12:4C:65:24:95:EC:AA:F4:E9:12:44:50:18:42:CB:12:07:3D:CB:03:32:FB:5C:25:B4:0D:AF:3A:D4:6C"
+      ]
+    }
+  }
+]
