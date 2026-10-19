@@ -7681,5 +7681,27 @@ function whDoMove() {
 })();
 </script>
 
+<button id="installAppBtn" style="display:none;position:fixed;bottom:calc(16px + env(safe-area-inset-bottom,0px));inset-inline-start:16px;z-index:9999;padding:12px 18px;border:0;border-radius:28px;background:#22c55e;color:#fff;font-weight:700;font-size:15px;box-shadow:0 4px 16px rgba(0,0,0,.4);cursor:pointer;">📲 ثبّت التطبيق</button>
+<script>
+(function () {
+    var btn = document.getElementById('installAppBtn'), deferred = null;
+    var standalone = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone;
+    if (standalone) return;
+    window.addEventListener('beforeinstallprompt', function (e) {
+        e.preventDefault(); deferred = e;
+        try { if (sessionStorage.getItem('installDismissed')) return; } catch (x) {}
+        btn.style.display = 'block';
+    });
+    btn.addEventListener('click', function () {
+        if (!deferred) return;
+        deferred.prompt();
+        deferred.userChoice.then(function (r) {
+            if (r.outcome !== 'accepted') { try { sessionStorage.setItem('installDismissed', '1'); } catch (x) {} }
+            deferred = null; btn.style.display = 'none';
+        });
+    });
+    window.addEventListener('appinstalled', function () { deferred = null; btn.style.display = 'none'; });
+})();
+</script>
 </body>
 </html>
