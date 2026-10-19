@@ -2951,6 +2951,12 @@
         }
     }
 
+    function syncNotifBanner() {
+        const granted = ('Notification' in window) && Notification.permission === 'granted';
+        document.querySelectorAll('.notification-banner').forEach(el => { el.style.display = granted ? 'none' : ''; });
+    }
+    document.addEventListener('DOMContentLoaded', syncNotifBanner);
+    setInterval(syncNotifBanner, 2000);
     function requestNotificationPermission() {
         if (!('Notification' in window)) {
             showToast('⚠️ متصفحك لا يدعم الإشعارات', 'warning');
@@ -2958,6 +2964,7 @@
         }
         if (Notification.permission === 'granted') {
             notificationPermission = true;
+            syncNotifBanner();
             showToast('✅ الإشعارات مفعلة بالفعل', 'success');
             return;
         }
@@ -2968,6 +2975,7 @@
         Notification.requestPermission().then(permission => {
             if (permission === 'granted') {
                 notificationPermission = true;
+                syncNotifBanner();
                 showToast('✅ تم تفعيل الإشعارات بنجاح!', 'success');
                 sendBrowserNotification('🔔 مرحباً!', 'تم تفعيل الإشعارات بنجاح');
             } else {
@@ -7681,26 +7689,12 @@ function whDoMove() {
 })();
 </script>
 
-<button id="installAppBtn" style="display:none;position:fixed;bottom:calc(16px + env(safe-area-inset-bottom,0px));inset-inline-start:16px;z-index:9999;padding:12px 18px;border:0;border-radius:28px;background:#22c55e;color:#fff;font-weight:700;font-size:15px;box-shadow:0 4px 16px rgba(0,0,0,.4);cursor:pointer;">📲 ثبّت التطبيق</button>
+<a id="apkBtn" href="/Wasla.apk" download="Wasla.apk" style="display:none;position:fixed;bottom:calc(16px + env(safe-area-inset-bottom,0px));inset-inline-start:16px;z-index:9999;padding:12px 18px;border-radius:28px;background:#22c55e;color:#fff;font-weight:700;font-size:15px;text-decoration:none;box-shadow:0 4px 16px rgba(0,0,0,.4);">⬇️ حمّل تطبيق الأندرويد</a>
 <script>
 (function () {
-    var btn = document.getElementById('installAppBtn'), deferred = null;
-    var standalone = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone;
-    if (standalone) return;
-    window.addEventListener('beforeinstallprompt', function (e) {
-        e.preventDefault(); deferred = e;
-        try { if (sessionStorage.getItem('installDismissed')) return; } catch (x) {}
-        btn.style.display = 'block';
-    });
-    btn.addEventListener('click', function () {
-        if (!deferred) return;
-        deferred.prompt();
-        deferred.userChoice.then(function (r) {
-            if (r.outcome !== 'accepted') { try { sessionStorage.setItem('installDismissed', '1'); } catch (x) {} }
-            deferred = null; btn.style.display = 'none';
-        });
-    });
-    window.addEventListener('appinstalled', function () { deferred = null; btn.style.display = 'none'; });
+    var btn = document.getElementById('apkBtn');
+    var standalone = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone || /wv|TWA/i.test(navigator.userAgent) || document.referrer.indexOf('android-app://') === 0;
+    if (!standalone && /Android/i.test(navigator.userAgent)) btn.style.display = 'block';
 })();
 </script>
 </body>
