@@ -2111,6 +2111,7 @@
                 <button class="tab-btn" data-tab="manager-logs" onclick="switchManagerTab('manager-logs')">📝 السجل</button>
                 <button class="tab-btn" data-tab="manager-alerts" onclick="switchManagerTab('manager-alerts')">🚨 التنبيهات <span id="mAlertsBadge" style="display:none;background:#e74c3c;color:#fff;border-radius:10px;padding:1px 7px;font-size:11px;">0</span></button>
                 <button class="tab-btn" data-tab="manager-reports" onclick="switchManagerTab('manager-reports')">📊 التقارير</button>
+                <button class="tab-btn" data-tab="manager-finance" onclick="switchManagerTab('manager-finance')">💰 المصروفات والوردية</button>
                 <button class="tab-btn" data-tab="manager-parts" onclick="switchManagerTab('manager-parts')">🔩 قطع الغيار</button>
                 <button class="tab-btn" data-tab="manager-warehouses" onclick="switchManagerTab('manager-warehouses')">🏬 المخازن</button>
                 <button class="tab-btn" data-tab="manager-settings" onclick="switchManagerTab('manager-settings')">⚙️ الإعدادات</button>
@@ -2157,12 +2158,13 @@
                             <input type="password" id="mNewUserPassword" placeholder="كلمة المرور">
                             <button class="toggle-password" onclick="togglePasswordVisibility('mNewUserPassword', this)" type="button">👁️</button>
                         </div>
-                        <select id="mNewUserRole">
+                        <select id="mNewUserRole" onchange="document.getElementById('mNewUserClientType').style.display=this.value==='client'?'':'none'">
                             <option value="client">👤 عميل</option>
                             <option value="cashier">💰 كاشير</option>
                             <option value="technician">🔧 فني صيانة</option>
                             <option value="manager">👨‍💼 مدير</option>
                         </select>
+                        <select id="mNewUserClientType" title="نوع العميل"><option value="">👤 عميل عادي</option><option value="gov">🏛️ عميل حكومي</option></select>
                         <input type="tel" id="mNewUserPhone" placeholder="📱 رقم الموبايل *" required>
                         <input type="email" id="mNewUserEmail" class="user-form-full" placeholder="📧 البريد الإلكتروني (اختياري)">
                     </div>
@@ -2195,6 +2197,7 @@
             <!-- تبويب الإعدادات -->
             <div class="tab-content" id="manager-alerts"><div id="mAlertsBox"></div></div>
             <div class="tab-content" id="manager-reports"><div id="mReportsBox"></div></div>
+            <div class="tab-content" id="manager-finance"><div id="mFinanceBox"></div></div>
             <div class="tab-content" id="manager-parts"><div id="mPartsBox"></div></div>
             <div class="tab-content" id="manager-warehouses"><div id="whBox"></div></div>
 
@@ -3835,6 +3838,8 @@
             loadManagerSettings();
         } else if (tabId === 'manager-alerts') {
             renderManagerAlerts();
+        } else if (tabId === 'manager-finance') {
+            renderManagerFinance();
         } else if (tabId === 'manager-reports') {
             renderManagerReports();
         } else if (tabId === 'manager-parts') {
@@ -3989,6 +3994,13 @@
         renderRequestsTable(filtered, 'mRequestsTable', 'manager');
     }
 
+    function toggleClientGov(username) {
+        const data = getData(), u = data.users.find(x => x.username === username);
+        if (!u || u.role !== 'client') return;
+        u.clientType = u.clientType === 'gov' ? '' : 'gov';
+        saveData(data); addLog(`غيّر ${currentUser.username} نوع العميل ${username} إلى ${u.clientType === 'gov' ? 'حكومي' : 'عادي'}`);
+        loadManagerUsersList();
+    }
     function loadManagerUsersList() {
         const data = getData();
         const container = document.getElementById('mUsersListContainer');
@@ -4006,9 +4018,10 @@
             html += `
                 <div class="user-card">
                     <strong>${u.username}</strong>
-                    <div><span class="role-tag" style="background:${roleColors[u.role]};color:#fff;padding:2px 10px;border-radius:10px;font-size:10px;">${roleNames[u.role] || u.role}</span></div>
+                    <div><span class="role-tag" style="background:${roleColors[u.role]};color:#fff;padding:2px 10px;border-radius:10px;font-size:10px;">${roleNames[u.role] || u.role}</span>${u.role === 'client' && u.clientType === 'gov' ? ' <span class="role-tag" style="background:#0ea5e9;color:#fff;padding:2px 10px;border-radius:10px;font-size:10px;">🏛️ حكومي</span>' : ''}</div>
                     ${contact ? `<div class="contact-details">${contact}</div>` : ''}
                     ${u.role === 'client' ? `<div style="font-size:11px;color:#ff5b5b;font-weight:700;margin-top:4px;">🎁 ${Number(u.loyaltyPoints) || 0} نقطة</div>` : ''}
+                    ${u.role === 'client' ? `<button class="btn btn-outline btn-sm" onclick="toggleClientGov('${u.username}')" style="margin-top:6px;font-size:10px;padding:3px 10px;">${u.clientType === 'gov' ? '↩️ تحويل لعادي' : '🏛️ تحويل لحكومي'}</button>` : ''}
                     <button class="btn btn-outline btn-sm" onclick="changeUserPassword('${u.username}')" style="margin-top:6px;font-size:10px;padding:3px 10px;">🔑 كلمة مرور</button>
                     ${u.username !== 'manager' ? `<button class="btn btn-danger btn-sm" onclick="deleteUserV2('${u.username}')" style="margin-top:6px;font-size:10px;padding:3px 10px;">🗑️ حذف</button>` : '<span style="color:#8892b0;font-size:10px;">🔒 أساسي</span>'}
                 </div>
@@ -4079,7 +4092,8 @@
             return;
         }
 
-        data.users.push({ username, password, role, phone, email });
+        const clientType = role === 'client' && document.getElementById('mNewUserClientType').value === 'gov' ? 'gov' : '';
+        data.users.push(clientType ? { username, password, role, phone, email, clientType } : { username, password, role, phone, email });
         saveData(data);
 
         showToast(`✅ تم إضافة المستخدم "${username}" بدور ${role}`, 'success');
@@ -4088,7 +4102,7 @@
         document.getElementById('mNewUserPhone').value = '';
         document.getElementById('mNewUserEmail').value = '';
         loadManagerUsersList();
-        addLog(`أضاف ${currentUser.username} مستخدم جديد: ${username} (${role})`);
+        addLog(`أضاف ${currentUser.username} مستخدم جديد: ${username} (${role}${clientType ? ' - حكومي' : ''})`);
     }
 
     function loadManagerAllChats() {
@@ -5695,6 +5709,81 @@ ${o.notice ? `<div class="note">${esc(o.notice)}</div>` : ''}
     // ---------------- التقارير ----------------
     let reportRange = (function () { try { var v = localStorage.getItem('wasla_report_range'); return ['today', '7', '30', '90', 'all'].indexOf(v) > -1 ? v : '30'; } catch (e) { return '30'; } })();
     function setReportRange(v) { reportRange = v; try { localStorage.setItem('wasla_report_range', v); } catch (e) {} renderManagerReports(); }
+
+    // ===== المصروفات والأرباح وإغلاق الوردية =====
+    const finDay = ts => new Date(ts).toISOString().slice(0, 10);
+    function finRange(from, to) {
+        const a = from ? new Date(from + 'T00:00:00').getTime() : 0, b = to ? new Date(to + 'T23:59:59').getTime() : Infinity;
+        return ts => ts >= a && ts <= b;
+    }
+    function renderManagerFinance() {
+        const box = $id('mFinanceBox'); if (!box) return;
+        const d = getData(), st = d.settings || (d.settings = {});
+        const exps = st.expenses || [], shifts = st.shifts || [];
+        const today = finDay(Date.now()), first = today.slice(0, 8) + '01';
+        const from = box.dataset.from || first, to = box.dataset.to || today;
+        const inR = finRange(from, to);
+        const pays = []; d.requests.forEach(r => (r.payments || []).forEach(p => { if (p.ts) pays.push(p); }));
+        const income = pays.filter(p => inR(p.ts)).reduce((a, p) => a + (Number(p.amount) || 0), 0);
+        const partsCost = d.requests.filter(r => r.status === 'picked_up').reduce((a, r) => {
+            const t = r.deliveredTs || (r.payments || []).reduce((m, p) => Math.max(m, p.ts || 0), 0);
+            return inR(t) ? a + (r.partsUsed || []).reduce((x, u) => { const pt = d.parts.find(q => q.name === u.name); return x + (pt ? (Number(pt.cost) || 0) * (Number(u.qty) || 0) : 0); }, 0) : a;
+        }, 0);
+        const spent = exps.filter(e => inR(e.ts)).reduce((a, e) => a + (Number(e.amount) || 0), 0);
+        const net = income - partsCost - spent;
+        const todayPays = pays.filter(p => finDay(p.ts) === today);
+        const expected = todayPays.reduce((a, p) => a + (Number(p.amount) || 0), 0);
+        const todayExp = exps.filter(e => finDay(e.ts) === today).reduce((a, e) => a + (Number(e.amount) || 0), 0);
+        const card = (t, v, c) => `<div class="stat-card" style="flex:1;min-width:140px;padding:12px;border-radius:12px;background:var(--card,#151a2e);"><small>${t}</small><div style="font-size:1.3em;font-weight:700;color:${c || 'inherit'}">${money(v)}</div></div>`;
+        box.innerHTML = `
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px">
+            <label>من <input type="date" id="finFrom" value="${from}"></label>
+            <label>إلى <input type="date" id="finTo" value="${to}"></label>
+            <button class="btn" onclick="finApplyRange()">تطبيق</button>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px">
+            ${card('💵 الإيرادات', income)}${card('🔩 تكلفة القطع', partsCost)}${card('🧾 المصروفات', spent)}${card('📈 صافي الربح', net, net >= 0 ? '#22c55e' : '#ef4444')}
+        </div>
+        <h3>➕ تسجيل مصروف</h3>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+            <select id="finCat"><option>إيجار</option><option>رواتب</option><option>كهرباء ومياه</option><option>مشتريات</option><option>مواصلات</option><option>أخرى</option></select>
+            <input type="number" id="finAmt" min="0" placeholder="المبلغ">
+            <input type="text" id="finNote" placeholder="ملاحظة (اختياري)">
+            <button class="btn" onclick="finAddExpense()">حفظ</button>
+        </div>
+        <div style="overflow-x:auto;margin-bottom:20px"><table class="data-table" style="width:100%"><thead><tr><th>التاريخ</th><th>النوع</th><th>المبلغ</th><th>ملاحظة</th><th></th></tr></thead><tbody>
+        ${exps.filter(e => inR(e.ts)).sort((a, b) => b.ts - a.ts).map(e => `<tr><td>${finDay(e.ts)}</td><td>${esc(e.cat)}</td><td>${money(e.amount)}</td><td>${esc(e.note || '')}</td><td><button class="btn" onclick="finDelExpense('${esc(e.id)}')">🗑️</button></td></tr>`).join('') || '<tr><td colspan="5">لا توجد مصروفات في الفترة</td></tr>'}
+        </tbody></table></div>
+        <h3>🔒 إغلاق وردية اليوم</h3>
+        <p>المتوقع في الخزنة اليوم (مدفوعات اليوم − مصروفات اليوم): <b>${money(expected - todayExp)}</b></p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+            <input type="number" id="shActual" min="0" placeholder="النقدية الفعلية في الدرج">
+            <input type="text" id="shNote" placeholder="ملاحظة">
+            <button class="btn" onclick="finCloseShift(${expected - todayExp})">إغلاق الوردية</button>
+        </div>
+        <div style="overflow-x:auto"><table class="data-table" style="width:100%"><thead><tr><th>التاريخ</th><th>المتوقع</th><th>الفعلي</th><th>الفرق</th><th>بواسطة</th><th>ملاحظة</th></tr></thead><tbody>
+        ${shifts.slice().sort((a, b) => b.ts - a.ts).slice(0, 30).map(h => { const df = h.actual - h.expected; return `<tr><td>${finDay(h.ts)}</td><td>${money(h.expected)}</td><td>${money(h.actual)}</td><td style="color:${df === 0 ? 'inherit' : df > 0 ? '#22c55e' : '#ef4444'}">${df > 0 ? '+' : ''}${df}</td><td>${esc(h.by || '')}</td><td>${esc(h.note || '')}</td></tr>`; }).join('') || '<tr><td colspan="6">لا توجد ورديات مغلقة</td></tr>'}
+        </tbody></table></div>`;
+    }
+    function finApplyRange() { const b = $id('mFinanceBox'); b.dataset.from = $id('finFrom').value; b.dataset.to = $id('finTo').value; renderManagerFinance(); }
+    function finAddExpense() {
+        const amt = Number($id('finAmt').value);
+        if (!(amt > 0)) { showToast('اكتب مبلغ صحيح', 'error'); return; }
+        const d = getData(); d.settings = d.settings || {};
+        d.settings.expenses = (d.settings.expenses || []).concat([{ id: generateId(), cat: $id('finCat').value, amount: amt, note: $id('finNote').value.trim().slice(0, 200), by: currentUser.username, ts: Date.now() }]);
+        saveData(d); addLog('تسجيل مصروف ' + $id('finCat').value + ' ' + amt); renderManagerFinance();
+    }
+    function finDelExpense(id) {
+        if (!confirm('حذف المصروف؟')) return;
+        const d = getData(); d.settings.expenses = (d.settings.expenses || []).filter(e => e.id !== id);
+        saveData(d); addLog('حذف مصروف'); renderManagerFinance();
+    }
+    function finCloseShift(expected) {
+        const v = $id('shActual').value; if (v === '') { showToast('اكتب النقدية الفعلية', 'error'); return; }
+        const d = getData(); d.settings = d.settings || {};
+        d.settings.shifts = (d.settings.shifts || []).concat([{ id: generateId(), ts: Date.now(), expected, actual: Number(v) || 0, note: $id('shNote').value.trim().slice(0, 200), by: currentUser.username }]).slice(-365);
+        saveData(d); addLog('إغلاق وردية — الفرق ' + ((Number(v) || 0) - expected)); showToast('تم إغلاق الوردية', 'success'); renderManagerFinance();
+    }
     function renderManagerReports() {
         const box = $id('mReportsBox'); if (!box) return;
         const d = getData(), now = Date.now();
@@ -6282,7 +6371,7 @@ window.holdConfirm = function (message, opts) {
     (function () {
         var items = [
             ['manager-dashboard', '📊', 'الرئيسية'], ['manager-requests', '📋', 'الطلبات'], ['manager-users', '👥', 'المستخدمين'],
-            ['manager-reports', '📈', 'التقارير'], ['manager-settings', '⚙️', 'الإعدادات']
+            ['manager-reports', '📈', 'التقارير'], ['manager-finance', '💰', 'المصروفات'], ['manager-settings', '⚙️', 'الإعدادات']
         ];
         var nav = document.createElement('nav'); nav.id = 'wDock'; nav.setAttribute('aria-label', 'التنقل السريع');
         nav.innerHTML = '<div class="w-pill"></div>' + items.map(function (x) {
