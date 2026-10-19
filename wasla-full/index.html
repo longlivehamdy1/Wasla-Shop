@@ -2944,7 +2944,7 @@
     }
 
     function syncNotifBanner() {
-        const granted = ('Notification' in window) && Notification.permission === 'granted';
+        const granted = !('Notification' in window) || Notification.permission === 'granted' || Notification.permission === 'denied';
         document.querySelectorAll('.notification-banner').forEach(el => { el.style.display = granted ? 'none' : ''; });
     }
     document.addEventListener('DOMContentLoaded', syncNotifBanner);
