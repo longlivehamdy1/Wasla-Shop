@@ -80,8 +80,8 @@ function defaultData() {
     return {
         users: [mk('manager', 'manager', '01001234567'), mk('client', 'client', '01001234568', 'client@example.com'),
             mk('cashier', 'cashier', '01007654321', 'cashier@example.com'), mk('technician', 'technician', '01001234569')],
-        techSeeded: true, requests: [], chats: [], logs: [], ratings: [], parts: [], stockLog: [],
-        settings: { warehouses: [{ id: 'main', name: 'المخزن الرئيسي' }], companyPhone: '01001234567', emailNotifications: { onCreate: false, onProgress: false, onComplete: false }, notificationEmail: '', warrantyDays: 30, lateDays: 7, pickupDays: 7, loyaltyPointsPerOrder: 10 },
+        techSeeded: true, requests: [], chats: [], logs: [], ratings: [], parts: [],
+        settings: { companyPhone: '01001234567', emailNotifications: { onCreate: false, onProgress: false, onComplete: false }, notificationEmail: '', warrantyDays: 30, lateDays: 7, pickupDays: 7 },
         _srv: { lastBackup: '', backups: [] }
     };
 }
@@ -99,12 +99,9 @@ async function migrate(d) {
         if (!d.users.some(u => u.role === 'technician') && !d.users.some(u => u.username === 'technician'))
             d.users.push({ username: 'technician', passwordHash: hashPassword('123'), role: 'technician', phone: '01001234569', email: '', mustChange: true });
     }
-    for (const k of ['requests', 'chats', 'logs', 'ratings', 'parts', 'stockLog']) if (!Array.isArray(d[k])) d[k] = [];
+    for (const k of ['requests', 'chats', 'logs', 'ratings', 'parts']) if (!Array.isArray(d[k])) d[k] = [];
     delete d.activeSessions;
-    d.settings = Object.assign({ companyPhone: '01001234567', notificationEmail: '', emailNotifications: { onCreate: false, onProgress: false, onComplete: false }, warrantyDays: 30, lateDays: 7, pickupDays: 7, loyaltyPointsPerOrder: 10 }, d.settings || {});
-    if (!Array.isArray(d.settings.warehouses) || !d.settings.warehouses.length) d.settings.warehouses = [{ id: 'main', name: 'المخزن الرئيسي' }];
-    for (const p of d.parts) if (!p.stock || typeof p.stock !== 'object') p.stock = { [d.settings.warehouses[0].id]: Math.max(0, Number(p.qty) || 0) };
-    for (const u of d.users) if (u.loyaltyPoints === undefined) u.loyaltyPoints = 0;
+    d.settings = Object.assign({ companyPhone: '01001234567', notificationEmail: '', emailNotifications: { onCreate: false, onProgress: false, onComplete: false }, warrantyDays: 30, lateDays: 7, pickupDays: 7 }, d.settings || {});
     const old = d._srv || {};
     d._srv = { lastBackup: old.lastBackup || '', backups: Array.isArray(old.backups) ? old.backups : [] };
     for (const r of d.requests) {
@@ -213,18 +210,18 @@ async function rateLimited(key, max, windowSec) {
 }
 
 // ---------------------------------------------------------------- العرض حسب الدور
-const pubUser = u => ({ username: u.username, role: u.role, phone: u.phone || '', email: u.email || '', mustChange: !!u.mustChange, loyaltyPoints: Number(u.loyaltyPoints) || 0 });
+const pubUser = u => ({ username: u.username, role: u.role, clientType: u.role === 'client' && u.clientType === 'gov' ? 'gov' : '', phone: u.phone || '', email: u.email || '', mustChange: !!u.mustChange });
 function viewFor(db, user, ver) {
     const key = ver + '|' + user.username;
     if (viewCache.has(key)) return viewCache.get(key);
     const me = user.username, role = user.role, s = db.settings, out = { me: pubUser(user) };
     if (role === 'manager') {
         out.users = db.users.map(pubUser); out.requests = db.requests; out.chats = db.chats; out.logs = db.logs;
-        out.ratings = db.ratings; out.parts = db.parts; out.settings = s; out.stockLog = db.stockLog.slice(-600);
+        out.ratings = db.ratings; out.parts = db.parts; out.settings = s;
     } else if (role === 'cashier') {
         out.users = db.users.filter(u => u.role !== 'manager').map(pubUser); out.requests = db.requests.map(hideMgr);
         out.chats = db.chats.filter(c => c.sender === me || c.receiver === me); out.ratings = db.ratings;
-        out.parts = db.parts.map(({ cost, ...p }) => p); out.settings = s; out.stockLog = db.stockLog.slice(-600).map(({ cost, ...e }) => e);
+        out.parts = db.parts.map(({ cost, ...p }) => p); { const { expenses, shifts, ...pubS } = s; out.settings = pubS; }
     } else if (role === 'technician') {
         out.users = db.users.filter(u => u.role === 'cashier' || u.username === me).map(u => ({ ...pubUser(u), phone: u === user ? u.phone || '' : '' }));
         out.requests = db.requests.filter(r => r.sentToTech === me).map(r => { const { price, deposit, payments, techHandedBackAt, techHandedBackTs, ...rest } = r; return rest; });
@@ -232,7 +229,7 @@ function viewFor(db, user, ver) {
         out.parts = db.parts.map(({ cost, ...p }) => p); out.settings = { companyPhone: s.companyPhone, warrantyDays: s.warrantyDays };
     } else {
         out.users = db.users.filter(u => u.role === 'cashier' || u.role === 'manager' || u.username === me)
-            .map(u => ({ username: u.username, role: u.role, phone: u === user ? u.phone || '' : '', email: u === user ? u.email || '' : '', mustChange: u === user && !!u.mustChange, loyaltyPoints: u === user ? (Number(u.loyaltyPoints) || 0) : undefined }));
+            .map(u => ({ username: u.username, role: u.role, phone: u === user ? u.phone || '' : '', email: u === user ? u.email || '' : '', mustChange: u === user && !!u.mustChange }));
         out.requests = db.requests.filter(r => r.clientName === me).map(r => {
             const { internalNotes, techHandedBackAt, techHandedBackTs, ...rest } = r;
             if (rest.partsUsed) rest.partsUsed = rest.partsUsed.map(p => ({ name: p.name, qty: p.qty }));
@@ -240,7 +237,7 @@ function viewFor(db, user, ver) {
         });
         out.chats = db.chats.filter(c => c.sender === me || c.receiver === me);
         out.ratings = db.ratings.filter(r => r.clientName === me);
-        out.settings = { companyPhone: s.companyPhone, warrantyDays: s.warrantyDays, loyaltyPointsPerOrder: s.loyaltyPointsPerOrder };
+        out.settings = { companyPhone: s.companyPhone, warrantyDays: s.warrantyDays };
     }
     const json = JSON.stringify(out);
     if (viewCache.size > 100) viewCache.clear();
@@ -252,7 +249,7 @@ function viewFor(db, user, ver) {
 const APPEND_ARRAYS = ['history', 'payments', 'internalNotes', 'partsUsed'];
 const TECH_FIELDS = ['progress', 'history', 'status', 'techStatus', 'techReceivedBy', 'techReceivedAt', 'techReceivedTs', 'techReceiptNo', 'acceptedByManagerAt', 'completedAt', 'completedTs', 'techHandedBackAt', 'techHandedBackTs', 'eta', 'quote', 'partsUsed', 'internalNotes', 'diagnosis'];
 const CLIENT_FIELDS = ['status', 'pickedUpAt', 'pickedUpTs', 'pickedUpBy', 'quote'];
-const CLIENT_CREATE = ['id', 'serialNumber', 'priority', 'deviceDetails', 'images', 'createdAt', 'createdAtTs', 'createdTs', 'clientEmail', 'deviceType', 'category'];
+const CLIENT_CREATE = ['id', 'serialNumber', 'priority', 'deviceDetails', 'images', 'createdAt', 'createdAtTs', 'createdTs', 'clientEmail'];
 const itemKey = x => (x && typeof x === 'object' && x.id) ? 'id:' + x.id : JSON.stringify(x);
 const paidOf = r => (r.payments || []).reduce((a, p) => a + (Number(p.amount) || 0), 0);
 function setField(target, k, v) {
@@ -281,7 +278,7 @@ async function applyOps(db, user, rawOps, rejected, ctx) {
                 const rec = { status: 'pending', progress: 0, deviceType: '', receivedByCashierAt: '', acceptedByManagerAt: '', completedAt: '', history: [] };
                 for (const k of CLIENT_CREATE) if (patch[k] !== undefined) rec[k] = patch[k];
                 rec.clientName = me; rec.createdBy = me; rec.clientPhone = user.phone || '';
-                rec.serialNumber = str(rec.serialNumber, 100); rec.deviceDetails = str(rec.deviceDetails, 1000); rec.deviceType = str(rec.deviceType, 60); rec.category = str(rec.category, 30);
+                rec.serialNumber = str(rec.serialNumber, 100); rec.deviceDetails = str(rec.deviceDetails, 1000);
                 rec.images = await extractImages(Array.isArray(rec.images) ? rec.images : []);
                 if (!rec.serialNumber) { rej('طلب بدون سيريال'); continue; }
                 db.requests.push(rec);
@@ -293,7 +290,6 @@ async function applyOps(db, user, rawOps, rejected, ctx) {
             continue;
         }
         const { id, __del, ...fields } = patch;
-        const prevStatus = ex.status;
         if (isStaff) {
             for (const [k, v] of Object.entries(fields)) { if (k === 'clientName' || k === 'createdBy') continue; setField(ex, k, v); }
             for (const k of (__del || [])) if (k !== 'id' && k !== 'clientName' && k !== 'createdBy') delete ex[k];
@@ -316,11 +312,6 @@ async function applyOps(db, user, rawOps, rejected, ctx) {
                         ex.quote = { ...ex.quote, status: v.status, decidedAt: str(v.decidedAt, 40), decidedTs: Number(v.decidedTs) || Date.now() };
                 } else ex[k] = v;
             }
-        }
-        if (prevStatus !== 'picked_up' && ex.status === 'picked_up') {
-            const pts = Math.max(0, Number(db.settings.loyaltyPointsPerOrder) || 0);
-            const cu = db.users.find(x => x.username === ex.clientName);
-            if (cu && pts) { cu.loyaltyPoints = (Number(cu.loyaltyPoints) || 0) + pts; ex.loyaltyPointsAwarded = pts; }
         }
     }
     if (isMgr) db.requests = db.requests.filter(r => !(R.remove || []).includes(r.id));
@@ -349,55 +340,16 @@ async function applyOps(db, user, rawOps, rejected, ctx) {
     for (const l of (L.append || [])) db.logs.push({ timestamp: str(l.timestamp, 60), user: isMgr ? str(l.user, 40) : me, action: str(l.action, 300) });
     if (db.logs.length > 1000) db.logs = db.logs.slice(-1000);
 
-    const pendingWh = (isMgr && ops.settings && ops.settings.set && Array.isArray(ops.settings.set.warehouses)) ? ops.settings.set.warehouses : null;
-    const whIds = new Set((pendingWh || db.settings.warehouses || []).map(w => w && w.id).filter(Boolean).map(x => str(x, 30)));
-    const cleanStock = st => { const o = {}; for (const [k, v] of Object.entries(st || {})) if (whIds.has(k)) o[k] = Math.max(0, Math.round((Number(v) || 0) * 1000) / 1000); return o; };
-    const sumStock = st => Object.values(st).reduce((x, y) => x + y, 0);
-    const fitQty = (ex, nq) => {
-        const st = cleanStock(ex.stock), ids = [...whIds];
-        let d = nq - sumStock(st);
-        if (d > 0 && ids.length) st[ids[0]] = (st[ids[0]] || 0) + d;
-        else for (const k of Object.keys(st)) { if (d >= 0) break; const t = Math.min(st[k], -d); st[k] -= t; d += t; }
-        ex.stock = st; ex.qty = sumStock(st);
-    };
     const P = ops.parts || {};
     for (const patch of (P.upsert || [])) {
         if (!patch || !patch.id) continue;
         const ex = db.parts.find(p => p.id === patch.id);
-        if (isMgr) {
-            let t = ex;
-            if (ex) { const { id, ...f } = patch; Object.assign(ex, f); } else { t = { ...patch }; db.parts.push(t); }
-            if (t.stock && typeof t.stock === 'object') { t.stock = cleanStock(t.stock); t.qty = sumStock(t.stock); }
-            else { t.stock = {}; fitQty(t, Math.max(0, Number(t.qty) || 0)); }
-        } else if ((role === 'cashier' || role === 'technician') && ex) {
-            if (patch.stock && typeof patch.stock === 'object') { ex.stock = cleanStock(patch.stock); ex.qty = sumStock(ex.stock); }
-            else if (patch.qty !== undefined) fitQty(ex, Math.max(0, Number(patch.qty) || 0));
-        }
+        if (isMgr) { if (ex) { const { id, ...f } = patch; Object.assign(ex, f); } else db.parts.push({ ...patch }); }
+        else if ((role === 'cashier' || role === 'technician') && ex && patch.qty !== undefined) ex.qty = Math.max(0, Number(patch.qty) || 0);
     }
     if (isMgr) db.parts = db.parts.filter(p => !(P.remove || []).includes(p.id));
 
-    for (const e of ((ops.stockLog || {}).append || [])) {
-        if (!e || role === 'client') continue;
-        const type = str(e.type, 12);
-        if (!['in', 'out', 'transfer', 'adjust', 'use'].includes(type)) continue;
-        if (role === 'technician' && type !== 'use') continue;
-        const entry = { id: str(e.id, 40), ts: Number(e.ts) || Date.now(), date: str(e.date, 60), type, partId: str(e.partId, 40), partName: str(e.partName, 120),
-            qty: Math.max(0, Number(e.qty) || 0), wh: str(e.wh, 30), to: str(e.to, 30), ref: str(e.ref, 40), note: str(e.note, 200), by: me };
-        if (type === 'adjust') { entry.before = Number(e.before) || 0; entry.after = Number(e.after) || 0; }
-        if (isMgr && e.cost !== undefined) entry.cost = Math.max(0, Number(e.cost) || 0);
-        db.stockLog.push(entry);
-    }
-    if (db.stockLog.length > 3000) db.stockLog = db.stockLog.slice(-3000);
-
-    if (isMgr && ops.settings && ops.settings.set) {
-        const st = ops.settings.set;
-        if (st.warehouses !== undefined) {
-            const seen = new Set();
-            const w = (Array.isArray(st.warehouses) ? st.warehouses : []).filter(x => x && x.id && !seen.has(str(x.id, 30)) && seen.add(str(x.id, 30))).slice(0, 20).map(x => ({ id: str(x.id, 30), name: str(x.name, 60) || 'مخزن' }));
-            st.warehouses = w.length ? w : [{ id: 'main', name: 'المخزن الرئيسي' }];
-        }
-        Object.assign(db.settings, st);
-    }
+    if (isMgr && ops.settings && ops.settings.set) Object.assign(db.settings, ops.settings.set);
 
     if (isMgr && ops.users) {
         for (const patch of (ops.users.upsert || [])) {
@@ -408,11 +360,11 @@ async function applyOps(db, user, rawOps, rejected, ctx) {
             if (!ex) {
                 if (!patch.password || String(patch.password).length < 4) { rej('كلمة مرور قصيرة'); continue; }
                 if (!['client', 'cashier', 'technician', 'manager'].includes(patch.role)) { rej('دور غير صالح'); continue; }
-                db.users.push({ username: str(patch.username, 40), passwordHash: hashPassword(patch.password), role: patch.role, phone: phone || '', email: str(patch.email, 100), mustChange: true });
+                db.users.push({ username: str(patch.username, 40), passwordHash: hashPassword(patch.password), role: patch.role, phone: phone || '', email: str(patch.email, 100), mustChange: true, ...(patch.role === 'client' && patch.clientType === 'gov' ? { clientType: 'gov' } : {}) });
             } else {
                 if (phone !== undefined) ex.phone = phone;
                 if (patch.email !== undefined) ex.email = str(patch.email, 100);
-                if (patch.loyaltyPoints !== undefined) ex.loyaltyPoints = Math.max(0, Number(patch.loyaltyPoints) || 0);
+                if (patch.clientType !== undefined && ex.role === 'client') ex.clientType = patch.clientType === 'gov' ? 'gov' : '';
                 if (patch.role && ex.username !== 'manager' && ['client', 'cashier', 'technician', 'manager'].includes(patch.role)) ex.role = patch.role;
                 if (patch.password) {
                     if (String(patch.password).length < 4) { rej('كلمة مرور قصيرة'); continue; }
