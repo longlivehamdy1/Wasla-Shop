@@ -1863,6 +1863,76 @@
 <body class="login-mode">
 <div id="wSplash" aria-hidden="true"><div class="wsp-ring"></div><div class="wsp-logo" id="wspLogo"></div><div class="wsp-name">Wasla</div><div class="wsp-tag">connect with your life</div><div class="wsp-bar"><i></i></div></div>
 <script>try{if(sessionStorage.getItem('wsp')){var _s=document.getElementById('wSplash');if(_s)_s.remove()}else sessionStorage.setItem('wsp','1')}catch(e){}</script>
+<script>
+/* ===== قفل البصمة (WebAuthn - بصمة/وجه/قفل الجهاز) ===== */
+(function () {
+    var KEY = 'wasla_bio', away = 0, busy = false, ov = null;
+    function ls(k, v) { try { if (v === undefined) return localStorage.getItem(k); if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch (e) {} return null; }
+    function b64(buf) { return btoa(String.fromCharCode.apply(null, new Uint8Array(buf))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); }
+    function unb64(s) { s = s.replace(/-/g, '+').replace(/_/g, '/'); while (s.length % 4) s += '='; return Uint8Array.from(atob(s), function (c) { return c.charCodeAt(0); }); }
+    function rnd(n) { return crypto.getRandomValues(new Uint8Array(n)); }
+    var supported = false;
+    var ready = (window.PublicKeyCredential && PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable)
+        ? PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable().then(function (v) { supported = !!v; }).catch(function () {}) : Promise.resolve();
+    function show(title, msg, btnText, onBtn, showExit) {
+        if (!ov) {
+            ov = document.createElement('div');
+            ov.style.cssText = 'position:fixed;inset:0;z-index:2147483647;background:#0b0e1a;color:#ccd6f6;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:24px;text-align:center;font-family:inherit;direction:rtl;';
+            document.body.appendChild(ov);
+        }
+        ov.innerHTML = '<div style="font-size:64px">🔒</div><h2 style="margin:0">' + title + '</h2><p style="margin:0;max-width:320px;opacity:.85">' + msg + '</p>' +
+            '<button id="bioGo" style="padding:14px 28px;border:0;border-radius:28px;background:#22c55e;color:#fff;font-weight:700;font-size:16px;cursor:pointer">' + btnText + '</button>' +
+            '<div id="bioErr" style="color:#ef4444;min-height:20px;font-size:14px"></div>' +
+            (showExit ? '<a id="bioExit" href="#" style="color:#8892b0;font-size:13px">لا أستطيع استخدام البصمة؟ سجّل الدخول بكلمة المرور</a>' : '');
+        document.getElementById('bioGo').onclick = onBtn;
+        var ex = document.getElementById('bioExit');
+        if (ex) ex.onclick = function (e) { e.preventDefault(); ls(KEY, null); ls('wasla_token', null); location.reload(); };
+    }
+    function hide() { if (ov) { ov.remove(); ov = null; } }
+    function err(m) { var e = document.getElementById('bioErr'); if (e) e.textContent = m; }
+    async function verify() {
+        if (busy) return; busy = true;
+        try {
+            var c = JSON.parse(ls(KEY));
+            await navigator.credentials.get({ publicKey: { challenge: rnd(32), rpId: location.hostname, timeout: 60000, userVerification: 'required',
+                allowCredentials: [{ type: 'public-key', id: unb64(c.id), transports: ['internal'] }] } });
+            hide();
+        } catch (e) { err('❌ لم يتم التحقق. حاول مرة أخرى'); }
+        busy = false;
+    }
+    async function register() {
+        if (busy) return; busy = true;
+        try {
+            var cred = await navigator.credentials.create({ publicKey: { challenge: rnd(32), rp: { name: 'Wasla', id: location.hostname },
+                user: { id: rnd(16), name: 'wasla-device', displayName: 'Wasla' }, pubKeyCredParams: [{ type: 'public-key', alg: -7 }, { type: 'public-key', alg: -257 }],
+                authenticatorSelection: { authenticatorAttachment: 'platform', userVerification: 'required', residentKey: 'discouraged' }, timeout: 60000, attestation: 'none' } });
+            ls(KEY, JSON.stringify({ id: b64(cred.rawId) }));
+            hide();
+        } catch (e) { err('❌ لم يتم تفعيل البصمة. حاول مرة أخرى'); }
+        busy = false;
+    }
+    function lock() {
+        if (!ls(KEY)) return;
+        show('التطبيق مقفول', 'استخدم بصمتك (أو قفل الجهاز) للدخول', '👆 افتح بالبصمة', verify, true);
+        setTimeout(verify, 300);
+    }
+    // 1) عند فتح التطبيق وفيه جلسة محفوظة: اقفل فوراً
+    if (ls('wasla_token') && ls(KEY)) { document.addEventListener('DOMContentLoaded', lock); if (document.body) lock(); }
+    // 2) اقفل تاني لو التطبيق اتسابت في الخلفية أكتر من 30 ثانية
+    document.addEventListener('visibilitychange', function () {
+        if (document.hidden) away = Date.now();
+        else if (away && Date.now() - away > 30000 && ls('wasla_token') && ls(KEY) && !ov) lock();
+    });
+    // 3) بعد أي دخول: لو البصمة لسه متسجلتش على الجهاز، اطلب تفعيلها (إجباري)
+    setInterval(function () {
+        if (ov || ls(KEY) || !ls('wasla_token') || typeof currentUser === 'undefined' || !currentUser) return;
+        ready.then(function () {
+            if (!supported || ov || ls(KEY)) return;
+            show('فعّل بصمة الدخول', 'لحماية بياناتك، لازم تسجّل بصمتك على الجهاز. هتتطلب منك كل مرة تفتح التطبيق', '👆 تفعيل البصمة', register, false);
+        });
+    }, 1500);
+})();
+</script>
 
 <div class="container" id="app">
     <!-- الهيدر -->
@@ -7695,6 +7765,54 @@ function whDoMove() {
     var btn = document.getElementById('apkBtn');
     var standalone = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone || /wv|TWA/i.test(navigator.userAgent) || document.referrer.indexOf('android-app://') === 0;
     if (!standalone && /Android/i.test(navigator.userAgent)) btn.style.display = 'block';
+})();
+</script>
+<button id="langBtn" onclick="waslaToggleLang()" style="position:fixed;top:calc(10px + env(safe-area-inset-top,0px));left:10px;z-index:9998;padding:6px 12px;border:0;border-radius:18px;background:#334155;color:#fff;font-weight:700;font-size:13px;cursor:pointer;opacity:.9;">EN</button>
+<script>
+/* ===== تبديل اللغة عربي / English ===== */
+(function () {
+    var D = {"حفظ": "Save", "كاميرات مراقبة": "CCTV Cameras", "جاهز للاستلام": "Ready for pickup", "فتح الشات": "Open chat", "تحديث": "Refresh", "طباعة": "Print", "بصمة حضور وانصراف": "Attendance Fingerprint", "بوابات إلكترونية": "Electronic Gates", "إنذار حريق": "Fire Alarm", "سنترالات": "PBX Systems", "دش مركزي": "Central Satellite", "شبكات وإنترنت": "Networks & Internet", "أنظمة صوت": "Sound Systems", "GPS للسيارات": "Car GPS", "نقاط بيع وكاشير": "POS & Cashier", "تكييفات": "Air Conditioners", "ثلاجات وفريزرات": "Fridges & Freezers", "سخانات": "Water Heaters", "بوتاجازات": "Cookers", "شاشات وتلفزيونات": "Screens & TVs", "سباكة عامة": "General Plumbing", "كهرباء منازل": "Home Electrical", "أثاث منزلي": "Home Furniture", "صيانة كمبيوتر": "Computer Repair", "صيانة لابتوب": "Laptop Repair", "تسجيل الدخول": "Log in", "تم التسليم": "Delivered", "إجمالي الطلبات": "Total orders", "قيد الانتظار": "Pending", "استلمه الكاشير": "Received by cashier", "في المخزن": "In warehouse", "متوسط الصيانة": "Avg. maintenance", "متوسط التقييم": "Avg. rating", "مكتمل الصيانة": "Repair complete", "تحديث نسبة الصيانة": "Update repair progress", "بحث": "Search", "كلمة المرور": "Password", "خروج": "Logout", "جاري التنفيذ...": "In progress...", "نظام ذكي لإدارة الصيانة والطلبات": "Smart repair & order management", "وصلة بتتولى لك": "Wasla takes care of it", "تتبع جهازك برقم الوصل (بدون حساب)": "Track your device by receipt number (no account)", "أدخل اسم المستخدم": "Enter username", "أو": "or", "رقم الموبايل": "Mobile number", "تذكرني": "Remember me", "نسيت كلمة المرور؟": "Forgot password?", "مش عندك حساب؟": "No account?", "إنشاء حساب جديد": "Create new account", "إنشاء حساب": "Create account", "رقم الموبايل إجباري": "Mobile number is required", "إضافة عميل جديد": "Add new client", "عندك حساب بالفعل؟": "Already have an account?", "اطلب خدمتك": "Request your service", "خدماتنا في مكان واحد": "Our services in one place", "إزاي بتتابع جهازك؟": "How do you track your device?", "استلام الجهاز": "Device received", "الكاشير يسجّل الجهاز ويديك رقم الوصل.": "The cashier registers your device and gives you a receipt number.", "الفحص والقبول": "Inspection & approval", "المدير يراجع الطلب ويحوّله للمخزن.": "The manager reviews the order and sends it to the warehouse.", "الصيانة": "Repair", "الفني ينفّذ الشغل وتقدر تكلّمه من الشات.": "The technician does the work and you can chat with them.", "بيوصلك إشعار أول ما الجهاز يخلص.": "You get a notification as soon as it's done.", "تستلم جهازك وتقيّم الخدمة.": "Pick up your device and rate the service.", "جاهز تبدأ؟": "Ready to start?", "ارجع لتسجيل الدخول": "Back to log in", "تنبيه:": "Note:", "تفعيل الإشعارات": "Enable notifications", "لوحة العميل": "Client Panel", "اختار القسم اللي محتاجه": "Choose the section you need", "طلب تسليم جهاز": "Device drop-off request", "طلب جديد": "New request", "طلباتي": "My orders", "عرض": "View", "التواصل مع الكاشير": "Contact cashier", "تقييم الخدمة": "Rate the service", "تقييم": "Rating", "نقاط الولاء": "Loyalty points", "كل طلب تستلمه يضيفلك نقاط": "Every order you collect earns you points", "لوحة الكاشير": "Cashier Panel", "استلام جهاز": "Receive device", "استلام": "Receive", "طباعة إيصال": "Print receipt", "إدارة المخازن": "Warehouse management", "فتح المخازن": "Open warehouses", "الشات مع العملاء": "Chat with clients", "لوحة الفني": "Technician Panel", "الأجهزة المرسلة لي": "Devices assigned to me", "تحديث القائمة": "Refresh list", "الشات مع الكاشير": "Chat with cashier", "لوحة المدير": "Manager Panel", "لوحة التحكم": "Dashboard", "الطلبات": "Orders", "المستخدمين": "Users", "المحادثات": "Chats", "التقييمات": "Ratings", "السجل": "Log", "التنبيهات": "Alerts", "التقارير": "Reports", "المصروفات والوردية": "Expenses & Shift", "قطع الغيار": "Spare parts", "المخازن": "Warehouses", "الإعدادات": "Settings", "طلبات عاجلة": "Urgent orders", "توزيع حالات الطلبات": "Order status distribution", "تقدم الصيانة": "Repair progress", "إضافة مستخدم جديد": "Add new user", "عميل": "Client", "كاشير": "Cashier", "فني صيانة": "Technician", "مدير": "Manager", "عميل عادي": "Regular client", "عميل حكومي": "Government client", "إضافة المستخدم": "Add user", "قائمة المستخدمين": "Users list", "جميع النشاطات في النظام": "All system activity", "مسح السجل": "Clear log", "رقم التواصل": "Contact number", "إعدادات البريد الإلكتروني": "Email settings", "عند إنشاء طلب": "When an order is created", "عند تحديث الصيانة": "When repair is updated", "عند اكتمال الصيانة": "When repair is completed", "حفظ إعدادات البريد": "Save email settings", "الضمان والتنبيهات": "Warranty & alerts", "مدة الضمان الافتراضية (يوم)": "Default warranty (days)", "تنبيه لو الجهاز جاهز ولم يُستلم من (يوم)": "Alert if device is ready but not collected for (days)", "نظام النقاط والولاء": "Points & loyalty system", "تحديث رصيد العميل": "Update client balance", "لون التطبيق": "App color", "اختيار شخصي على جهازك بس.": "Personal choice on your device only.", "النسخ الاحتياطي التلقائي": "Automatic backup", "بتتعمل نسخة كل يوم تلقائي (آخر 30 يوم).": "A backup is made daily (last 30 days).", "نسخة احتياطية الآن": "Backup now", "أدوات النظام": "System tools", "إعادة ضبط النظام": "Reset system", "تصدير جميع البيانات": "Export all data", "استيراد بيانات": "Import data", "صفحتنا على فيسبوك": "Our Facebook page", "© 2026 Wasla - جميع الحقوق محفوظة": "© 2026 Wasla - All rights reserved", "اختر التقييم:": "Choose a rating:", "لم يتم التقييم": "Not rated", "إرسال التقييم": "Submit rating", "مركز المحادثات": "Chat center", "-- اختر العميل --": "-- Select client --", "لا توجد رسائل بعد": "No messages yet", "إرسال": "Send", "جميع المحادثات": "All chats", "القسم:": "Section:", "نوع الجهاز / الخدمة:": "Device / service type:", "عادي": "Normal", "متوسط": "Medium", "عاجل": "Urgent", "صور الجهاز / المشكلة:": "Device / problem photos:", "اضغط لرفع صورة للجهاز": "Tap to upload a device photo", "إرسال الطلب": "Submit request", "تصوير السيريال نمبر": "Scan serial number", "التقاط": "Capture", "إيقاف": "Stop", "إعادة التشغيل": "Restart", "النص المستخرج:": "Extracted text:", "استخدام هذا النص": "Use this text", "السيريال نمبر:": "Serial number:", "تصوير": "Scan", "تأكيد الاستلام": "Confirm receipt", "اسم المستخدم": "Username", "البريد الإلكتروني": "Email", "إلغاء": "Cancel", "تأكيد": "Confirm", "حذف": "Delete", "تعديل": "Edit", "إغلاق": "Close", "رجوع": "Back", "التالي": "Next", "نعم": "Yes", "لا": "No"};
+    var lang = 'ar'; try { lang = localStorage.getItem('wasla_lang') || 'ar'; } catch (e) {}
+    var orig = new WeakMap(), busy = false;
+    var LEAD = /^[^\u0600-\u06FFA-Za-z0-9]+/;
+    function tr(str) {
+        var t = str.trim(); if (!t) return null;
+        if (D[t]) return str.replace(t, D[t]);
+        var m = t.match(LEAD), pre = m ? m[0] : '', rest = t.slice(pre.length).trim();
+        if (rest && D[rest]) return str.replace(t, pre + D[rest]);
+        return null;
+    }
+    function node(n) {
+        if (n.nodeType === 3) {
+            if (!n.parentNode || /^(SCRIPT|STYLE|TEXTAREA)$/.test(n.parentNode.nodeName)) return;
+            var o = orig.get(n);
+            if (lang === 'en') { var r = tr(o !== undefined && n.nodeValue === o.en ? o.ar : n.nodeValue); if (r !== null) { if (o === undefined || n.nodeValue !== o.en) orig.set(n, { ar: n.nodeValue, en: r }); n.nodeValue = r; } }
+            else if (o !== undefined && n.nodeValue === o.en) n.nodeValue = o.ar;
+        } else if (n.nodeType === 1) {
+            if (/^(SCRIPT|STYLE)$/.test(n.nodeName)) return;
+            ['placeholder', 'title'].forEach(function (a) {
+                if (!n.hasAttribute(a)) return;
+                var k = '__' + a, v = n.getAttribute(a);
+                if (lang === 'en') { var r = tr(v); if (r !== null) { n[k] = v; n.setAttribute(a, r); } }
+                else if (n[k] !== undefined) { n.setAttribute(a, n[k]); n[k] = undefined; }
+            });
+            for (var c = n.firstChild; c; c = c.nextSibling) node(c);
+        }
+    }
+    function apply() {
+        busy = true;
+        document.documentElement.lang = lang; document.documentElement.dir = lang === 'en' ? 'ltr' : 'rtl';
+        node(document.body);
+        var b = document.getElementById('langBtn'); if (b) b.textContent = lang === 'en' ? 'عربي' : 'EN';
+        busy = false;
+    }
+    window.waslaToggleLang = function () { lang = lang === 'en' ? 'ar' : 'en'; try { localStorage.setItem('wasla_lang', lang); } catch (e) {} apply(); };
+    new MutationObserver(function (ms) {
+        if (busy || lang !== 'en') return; busy = true;
+        ms.forEach(function (m) { if (m.type === 'childList') m.addedNodes.forEach(node); else if (m.type === 'characterData') node(m.target); });
+        busy = false;
+    }).observe(document.body, { childList: true, subtree: true, characterData: true });
+    if (lang === 'en') apply();
 })();
 </script>
 </body>
