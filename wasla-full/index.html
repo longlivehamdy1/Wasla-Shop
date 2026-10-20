@@ -1852,6 +1852,105 @@
         html[data-accent] #dashboard input:focus, html[data-accent] #dashboard select:focus, html[data-accent] .modal-content input:focus, html[data-accent] .modal-content select:focus, html[data-accent] .modal-content textarea:focus { border-color: var(--ac1) !important; box-shadow: 0 0 0 4px rgba(var(--acrgb), .16) !important; }
         html[data-accent] .table-responsive tbody tr:hover { box-shadow: inset -3px 0 0 var(--ac1) !important; background: rgba(var(--acrgb), .07) !important; }
     </style>
+    <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap">
+    <style id="wMobileSkin">
+/* ============================================================ */
+/* ===== Wasla v7: نفس لغة تصميم تطبيق الموبايل على الويب ===== */
+/* ============================================================ */
+:root {
+  --m-bg:#0b0e1a; --m-card:#151b33; --m-card2:#1b2342; --m-line:#232b4d;
+  --m-mut:#8c97b8; --m-txt:#e6ebff; --m-red:#e74c3c; --m-green:#22c55e; --m-amber:#f5a524;
+  --m-blue:#2f5fd0; --m-orange:#c26a0a; --m-purple:#7c3fc4; --m-teal:#0e8a9c;
+}
+html body { font-family:'Inter','Segoe UI',Tahoma,Geneva,Verdana,sans-serif; color:var(--m-txt); }
+html body:not(.login-mode) { background:var(--m-bg); }
+html body:not(.login-mode) #wNet { opacity:.18; }
+.w-aurora i { opacity:.22 !important; }
+
+/* الحاوية والكروت: مسطّحة زي الموبايل (بدون زجاج) */
+html body:not(.login-mode) .container { background:transparent; border:0; box-shadow:none; backdrop-filter:none; padding:8px 4px; }
+html body:not(.login-mode) .header { border-bottom:1px solid var(--m-line); }
+html body:not(.login-mode) .header::after { display:none; }
+html body:not(.login-mode) .header h1 { background:none; -webkit-text-fill-color:var(--m-txt); color:var(--m-txt); font-weight:700; }
+html body:not(.login-mode) .stat-card, html body:not(.login-mode) .card,
+html body:not(.login-mode) .user-card, html body:not(.login-mode) .ct-card {
+  background:var(--m-card); border:1px solid var(--m-line); border-radius:18px; backdrop-filter:none; box-shadow:none;
+}
+html body:not(.login-mode) .stat-card:hover, html body:not(.login-mode) .card:hover { border-color:#34406b; box-shadow:none; transform:none; }
+html body:not(.login-mode) .stat-card { text-align:center; padding:14px 10px; }
+html body:not(.login-mode) .stat-card .number { background:none; -webkit-text-fill-color:var(--m-txt); color:var(--m-txt); font-weight:700; }
+html body:not(.login-mode) .stat-card .label, html body:not(.login-mode) .stat-card h3 { color:var(--m-mut); }
+html body:not(.login-mode) .card h3 { color:var(--m-txt); }
+
+/* التابات: حبوب زي شريط التنقل */
+html body:not(.login-mode) .manager-tabs { background:var(--m-card); border:1px solid var(--m-line); border-radius:22px; backdrop-filter:none; padding:6px; }
+html body:not(.login-mode) .manager-tabs .tab-btn { border-radius:16px; color:var(--m-mut); background:transparent; }
+html body:not(.login-mode) .manager-tabs .tab-btn.active { background:var(--m-red); color:#fff; box-shadow:none; }
+
+/* الأزرار */
+html body .btn { border-radius:16px; font-weight:700; }
+html body:not(.login-mode) .btn:not(.btn-outline):not([class*="btn-"]) { background:var(--m-red); box-shadow:none; }
+html body .btn-outline { background:var(--m-card); border:1px solid var(--m-line); color:var(--m-txt); }
+html body .btn-outline:hover { border-color:var(--m-red); }
+
+/* الجداول والحقول */
+html body:not(.login-mode) th { background:var(--m-card2); color:var(--m-mut); font-weight:600; border-bottom:1px solid var(--m-line); }
+html body:not(.login-mode) td { border-color:var(--m-line); }
+html body:not(.login-mode) #dashboard input:not([type="checkbox"]):not([type="radio"]), html body:not(.login-mode) #dashboard select, html body:not(.login-mode) #dashboard textarea,
+html body:not(.login-mode) .modal-content input:not([type="checkbox"]):not([type="radio"]), html body:not(.login-mode) .modal-content select, html body:not(.login-mode) .modal-content textarea,
+html body:not(.login-mode) .search-box { background:var(--m-card); border:1px solid var(--m-line); border-radius:14px; color:var(--m-txt); }
+html body:not(.login-mode) #dashboard input:focus, html body:not(.login-mode) .modal-content input:focus { border-color:var(--m-red); box-shadow:0 0 0 3px rgba(231,76,60,.18); }
+
+/* النوافذ والإشعارات */
+html body .modal-content, .w-pal, .w-hold-box { background:var(--m-card); border:1px solid var(--m-line); border-radius:22px; }
+.toast { border-radius:16px; }
+
+/* شريط التقدم: أخضر زي التتبع */
+.progress-bar { background:var(--m-line); border-radius:6px; }
+.progress-bar .fill { background:var(--m-green); border-radius:6px; }
+.mini-steps i.done { background:var(--m-green); } .mini-steps i.current { background:var(--m-amber); }
+.status-badge { border-radius:20px; }
+
+/* ===== شاشة الدخول والصفحة الخارجية ===== */
+html body .login-box { background:var(--m-card); border:1px solid var(--m-line); border-radius:22px; backdrop-filter:none; box-shadow:0 20px 60px rgba(0,0,0,.35); }
+.lg-sub, .lg-step p, .lg-lead { color:var(--m-mut); }
+.service-chip { background:var(--m-card); border:1px solid var(--m-line); border-radius:16px; }
+.lg-svc { background:var(--m-card); border:0; border-radius:20px; min-height:112px; display:flex; flex-direction:column; justify-content:flex-end; align-items:flex-start; text-align:start; backdrop-filter:none; }
+.lg-svc:nth-child(4n+1) { background:var(--m-blue); } .lg-svc:nth-child(4n+2) { background:var(--m-orange); }
+.lg-svc:nth-child(4n+3) { background:var(--m-purple); } .lg-svc:nth-child(4n+4) { background:var(--m-teal); }
+.lg-svc:hover { border:0; filter:brightness(1.1); transform:translateY(-3px); }
+.lg-svc::after { display:none; } .lg-svc b { color:#fff; font-size:16px; } .lg-svc-ico { font-size:30px; }
+.lg-line i { background:var(--m-green); } .lg-step-dot { background:var(--m-card); border-color:var(--m-green); }
+.lg-cta-btn { background:var(--m-red); border-radius:16px; box-shadow:none; } .lg-cta-btn:hover { box-shadow:0 12px 30px rgba(231,76,60,.4); }
+
+/* ===== شريط التنقل السفلي للموبايل ===== */
+@media (max-width:700px) {
+  #wDock { background:var(--m-card); border:1px solid var(--m-line); border-radius:26px; backdrop-filter:none; box-shadow:none; }
+  #wDock button { color:var(--m-mut); } #wDock button.active { color:var(--m-red); }
+  #wDock .w-pill { display:none; }
+  .chat-float-btn { background:var(--m-red) !important; border:5px solid var(--m-bg); }
+}
+    
+/* ===== شاشة الدخول (login-mode) بنفس لغة الموبايل ===== */
+html body.login-mode { background:var(--m-bg); }
+html body.login-mode .login-box { background:var(--m-card); border:1px solid var(--m-line); border-radius:22px; backdrop-filter:none; -webkit-backdrop-filter:none; box-shadow:0 20px 60px rgba(0,0,0,.4); }
+html body.login-mode .login-box::before { display:none; }
+html body.login-mode .login-box::after { background:radial-gradient(420px circle at var(--mx) var(--my), rgba(231,76,60,.08), transparent 60%); }
+html body.login-mode .login-box h2 { font-weight:700; }
+html body.login-mode .login-box input:not([type="checkbox"]) { background:var(--m-bg); border:1px solid var(--m-line); border-radius:14px; color:var(--m-txt); }
+html body.login-mode .login-box input:focus { border-color:var(--m-red); box-shadow:0 0 0 3px rgba(231,76,60,.18); background:var(--m-bg); }
+html body.login-mode .login-submit-btn { background:var(--m-red); border-radius:16px; box-shadow:none; font-weight:700; }
+html body.login-mode .login-submit-btn:hover { box-shadow:0 12px 30px rgba(231,76,60,.4); transform:translateY(-1px); }
+html body.login-mode .login-submit-btn::after { display:none; }
+html body.login-mode .lg-title { font-weight:700; letter-spacing:0; }
+html body.login-mode .lg-title .w:nth-last-child(-n+2) > span { background:none; -webkit-text-fill-color:var(--m-red); color:var(--m-red); }
+html body.login-mode .lg-rot b { color:var(--m-green); }
+html body.login-mode .lg-track .service-chip { background:var(--m-card); border:1px solid var(--m-line); border-radius:16px; backdrop-filter:none; color:var(--m-txt); }
+html body.login-mode .lg-track .service-chip:hover { background:var(--m-card2); border-color:var(--m-red); }
+html body.login-mode .lg-hero .track-btn-wrap .btn { background:var(--m-card); border:1px solid var(--m-line); border-radius:16px; }
+html body.login-mode .lg-logo img { box-shadow:none; }
+    </style>
 </head>
 <body class="login-mode">
 <div id="wSplash" aria-hidden="true"><div class="wsp-ring"></div><div class="wsp-logo" id="wspLogo"></div><div class="wsp-name">Wasla</div><div class="wsp-tag">connect with your life</div><div class="wsp-bar"><i></i></div></div>
