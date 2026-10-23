@@ -89,10 +89,14 @@
         /* ===== ثيم فاتح (بيتحوّل بحركة دائرية) ===== */
         html.w-inv { filter: invert(1) hue-rotate(180deg); background: #fff; }
         html.w-inv img, html.w-inv video, html.w-inv iframe, html.w-inv .device-image { filter: invert(1) hue-rotate(180deg); }
-        body.login-mode #wThemeBtn { display: none; }
         ::view-transition-old(root), ::view-transition-new(root) { animation: none; mix-blend-mode: normal; }
         .w-hbtn { background: rgba(255,255,255,0.08); color: #ccd6f6; border: 1px solid rgba(255,255,255,0.15); border-radius: 10px; padding: 6px 10px; cursor: pointer; font-size: 13px; }
         .w-hbtn:hover { background: rgba(255,255,255,0.16); }
+        #wThemeBtn { min-width: 92px; transition: background .2s ease, transform .2s ease; }
+        #wThemeBtn:active { transform: scale(.97); }
+        #wThemeBtn:focus-visible { outline: 2px solid var(--accent, #ff5b5b); outline-offset: 3px; }
+        html { color-scheme: dark; }
+        html.w-light { color-scheme: light; }
         #wSearchBtn { display: none; }
 
         /* ===== بحث سريع (Ctrl+K) ===== */
@@ -6566,8 +6570,15 @@ window.holdConfirm = function (message, opts) {
 
     /* --- ثيم فاتح/داكن بحركة دائرية --- */
     var themeBtn = $('wThemeBtn'), root = document.documentElement;
-    function themeIcon() { if (themeBtn) themeBtn.textContent = root.classList.contains('w-light') ? '☀️' : '🌙'; }
-    function applyInv() { root.classList.toggle('w-inv', root.classList.contains('w-light') && !document.body.classList.contains('login-mode')); }
+    function themeIcon() {
+        if (!themeBtn) return;
+        var light = root.classList.contains('w-light');
+        themeBtn.textContent = light ? '☀️ فاتح' : '🌙 داكن';
+        themeBtn.setAttribute('aria-label', light ? 'التبديل إلى الوضع الداكن' : 'التبديل إلى الوضع الفاتح');
+        themeBtn.setAttribute('aria-pressed', light ? 'true' : 'false');
+        themeBtn.title = light ? 'الوضع الفاتح — اضغط للتبديل إلى الداكن' : 'الوضع الداكن — اضغط للتبديل إلى الفاتح';
+    }
+    function applyInv() { root.classList.toggle('w-inv', root.classList.contains('w-light')); }
     function flip() { root.classList.toggle('w-light'); lsSet('wasla_theme', root.classList.contains('w-light') ? 'light' : 'dark'); themeIcon(); applyInv(); }
     new MutationObserver(applyInv).observe(document.body, { attributes: true, attributeFilter: ['class'] });
     applyInv();
