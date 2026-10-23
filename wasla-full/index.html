@@ -6208,6 +6208,11 @@ window.holdConfirm = function (message, opts) {
 };
 </script>
 
+<!-- GSAP + ScrollTrigger + Lenis: لازم تتحمّل هنا قبل أي كود بيستخدم window.gsap تحت، عشان كل الأنيميشن (الشبكة اللي بتتفاعل مع الماوس، الكروت، السكرول) يرجع يشتغل بدل ما يرجع فاضي -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/lenis@1.1.18/dist/lenis.min.js"></script>
+
 <script>
 /* ===== Wasla motion: GSAP + Lenis (آمن: لو المكتبات ماتحملتش الموقع يشتغل عادي) ===== */
 (function () {
