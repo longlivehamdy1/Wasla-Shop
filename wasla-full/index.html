@@ -1955,6 +1955,49 @@ html body.login-mode .lg-track .service-chip:hover { background:var(--m-card2); 
 html body.login-mode .lg-hero .track-btn-wrap .btn { background:var(--m-card); border:1px solid var(--m-line); border-radius:16px; }
 html body.login-mode .lg-logo img { box-shadow:none; }
     </style>
+
+<style id="wasla-professional-ui-polish">
+/* Wasla UI polish: intentionally preserves existing brand colors, layout logic and features */
+:root { color-scheme: dark; scroll-behavior: smooth; }
+html { scroll-padding-top: 84px; }
+body { -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
+button, input, select, textarea { font: inherit; }
+button, a, [role="button"] { -webkit-tap-highlight-color: transparent; }
+button, a, input, select, textarea, [role="button"] { transition: box-shadow .18s ease, border-color .18s ease, background-color .18s ease, color .18s ease, transform .18s ease; }
+:where(button, a, input, select, textarea, [role="button"]):focus-visible {
+  outline: 2px solid var(--accent, var(--primary, #f59e0b));
+  outline-offset: 3px;
+}
+:where(input, select, textarea) { max-width: 100%; }
+:where(button, .btn, [role="button"]) { touch-action: manipulation; }
+:where(.card, .product-card, .stat-card, .user-card, .modal, .panel, .dashboard-card) {
+  transition: box-shadow .2s ease, border-color .2s ease, transform .2s ease;
+}
+:where(.card, .product-card, .stat-card, .user-card, .dashboard-card):hover {
+  border-color: color-mix(in srgb, currentColor 18%, transparent);
+}
+:where(button, .btn):active { transform: translateY(1px); }
+:where(input, select, textarea) { min-width: 0; }
+img, video, canvas, svg { max-width: 100%; }
+table { max-width: 100%; }
+@media (max-width: 768px) {
+  html { scroll-padding-top: 64px; }
+  input, select, textarea { font-size: 16px; } /* avoids automatic zoom on iOS */
+  :where(button, .btn, [role="button"]) { min-height: 40px; }
+  table { font-size: .92em; }
+}
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+html.w-light { color-scheme: light; }
+</style>
+
 </head>
 <body class="login-mode">
 <div id="wSplash" aria-hidden="true"><div class="wsp-ring"></div><div class="wsp-logo" id="wspLogo"></div><div class="wsp-name">Wasla</div><div class="wsp-tag">connect with your life</div><div class="wsp-bar"><i></i></div></div>
