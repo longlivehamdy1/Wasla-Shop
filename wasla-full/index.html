@@ -1998,6 +1998,40 @@ table { max-width: 100%; }
 html.w-light { color-scheme: light; }
 </style>
 
+
+<style id="wasla-glass-dashboard">
+/* Wasla Glass Dashboard: visual layer only; app logic and data bindings are untouched */
+:root{--wg-border:rgba(255,255,255,.13);--wg-gold:#f3bd68;--wg-blue:#73c8ff}
+body{background:radial-gradient(ellipse at 8% 8%,rgba(32,129,185,.17),transparent 34%),radial-gradient(ellipse at 90% 18%,rgba(219,151,65,.14),transparent 30%),radial-gradient(ellipse at 65% 92%,rgba(91,77,181,.14),transparent 36%),#0b1020!important;background-attachment:fixed!important}
+#dashboard{isolation:isolate}
+#managerPanel{position:relative;overflow:hidden;border:1px solid var(--wg-border)!important;border-radius:26px!important;padding:clamp(14px,2.2vw,28px)!important;background:linear-gradient(135deg,rgba(255,255,255,.075),rgba(255,255,255,.018) 55%),rgba(12,19,34,.66)!important;box-shadow:0 24px 70px rgba(0,0,0,.26),inset 0 1px 0 rgba(255,255,255,.07)!important;backdrop-filter:blur(24px) saturate(135%);-webkit-backdrop-filter:blur(24px) saturate(135%)}
+#managerPanel:before{content:"";position:absolute;inset:0;pointer-events:none;z-index:0;background:radial-gradient(ellipse at 100% 0%,rgba(243,189,104,.09),transparent 42%),radial-gradient(ellipse at 0% 35%,rgba(73,172,235,.075),transparent 38%)}
+#managerPanel>*{position:relative;z-index:1}
+#managerPanel>.wasla-manager-title{margin:0 0 14px!important;padding:0 2px;color:#f5f7fc!important;font-size:clamp(20px,2.5vw,28px)!important;letter-spacing:-.4px}
+.wasla-glass-hero{display:flex;align-items:center;justify-content:space-between;gap:18px;min-height:142px;margin:14px 0 20px;padding:clamp(20px,3vw,32px);border:1px solid rgba(255,255,255,.19);border-radius:22px;overflow:hidden;position:relative;background:linear-gradient(112deg,rgba(24,42,65,.78),rgba(86,81,79,.27)),radial-gradient(circle at 78% 20%,rgba(243,189,104,.25),transparent 38%),rgba(255,255,255,.055);box-shadow:inset 0 1px 0 rgba(255,255,255,.17),0 16px 35px rgba(0,0,0,.14);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px)}
+.wasla-glass-hero:after{content:"";position:absolute;width:230px;height:230px;border:1px solid rgba(255,255,255,.09);border-radius:50%;left:8%;top:-145px;box-shadow:0 0 0 28px rgba(255,255,255,.025),0 0 0 58px rgba(255,255,255,.018);pointer-events:none}
+.wasla-hero-copy{position:relative;z-index:1}.wasla-hero-eyebrow{display:inline-flex;align-items:center;gap:8px;color:#f3c77f;font-size:10px;font-weight:800;letter-spacing:1.8px;margin-bottom:10px}.wasla-live-dot{width:7px;height:7px;background:#64e0b0;border-radius:50%;box-shadow:0 0 12px rgba(100,224,176,.8)}
+.wasla-glass-hero h2{margin:0 0 7px;color:#fff;font-size:clamp(21px,3vw,32px);font-weight:800;letter-spacing:-.6px}.wasla-glass-hero p{margin:0;color:#c2cede;font-size:13px;line-height:1.9}
+.wasla-hero-mark{width:92px;height:92px;flex:0 0 92px;display:grid;place-items:center;position:relative;border:1px solid rgba(255,255,255,.23);border-radius:27px;background:linear-gradient(145deg,rgba(255,255,255,.18),rgba(255,255,255,.035));box-shadow:inset 0 1px 0 rgba(255,255,255,.18),0 15px 30px rgba(0,0,0,.16);transform:rotate(5deg)}
+.wasla-hero-mark span{font-size:42px;font-weight:900;color:#f3c77f;text-shadow:0 4px 20px rgba(243,189,104,.28)}.wasla-hero-mark i{position:absolute;width:8px;height:8px;border-radius:50%;background:#73c8ff;right:10px;top:10px}.wasla-hero-mark i:nth-of-type(2){right:auto;top:auto;left:12px;bottom:15px;background:#f3bd68}.wasla-hero-mark i:nth-of-type(3){right:15px;top:auto;bottom:10px;background:#6ce0b1}
+#managerTabs{display:flex;gap:8px;padding:8px;margin:0 0 20px;border:1px solid rgba(255,255,255,.1);border-radius:17px;background:rgba(4,10,22,.42);box-shadow:inset 0 1px 0 rgba(255,255,255,.035);overflow-x:auto;scrollbar-width:thin;scrollbar-color:rgba(243,189,104,.35) transparent}
+#managerTabs .tab-btn{flex:0 0 auto;border:1px solid transparent!important;border-radius:11px!important;background:transparent!important;color:#aebbd0!important;padding:11px 15px!important;font-weight:700;transition:all .22s ease;white-space:nowrap}
+#managerTabs .tab-btn:hover{background:rgba(255,255,255,.07)!important;color:#fff!important;border-color:rgba(255,255,255,.09)!important;transform:translateY(-1px)}
+#managerTabs .tab-btn.active{color:#1a2230!important;background:linear-gradient(135deg,#f5d28f,#e7aa54)!important;box-shadow:0 7px 20px rgba(231,170,84,.2),inset 0 1px 0 rgba(255,255,255,.65);border-color:rgba(255,255,255,.3)!important}
+#managerStats.stats-advanced{gap:13px;margin:0 0 20px}
+#managerStats .stat-card{min-height:132px;position:relative;overflow:hidden;border:1px solid rgba(255,255,255,.12)!important;border-radius:19px!important;background:linear-gradient(145deg,rgba(255,255,255,.095),rgba(255,255,255,.025) 62%),rgba(18,28,46,.64)!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.08),0 12px 26px rgba(0,0,0,.12)!important;backdrop-filter:blur(15px);-webkit-backdrop-filter:blur(15px);transition:transform .24s ease,border-color .24s ease,box-shadow .24s ease!important}
+#managerStats .stat-card:before{content:"";position:absolute;inset:0 auto 0 0;width:3px;background:linear-gradient(180deg,#f3bd68,#73c8ff);opacity:.8}
+#managerStats .stat-card:hover{transform:translateY(-4px)!important;border-color:rgba(243,189,104,.34)!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.1),0 18px 34px rgba(0,0,0,.2)!important}
+#managerStats .icon-big{font-size:23px!important;filter:drop-shadow(0 4px 9px rgba(0,0,0,.18))}#managerStats .number{color:#fff!important;font-size:clamp(24px,2.3vw,32px)!important;font-weight:850!important;letter-spacing:-.7px}#managerStats .label{color:#aebbd0!important;font-size:12px!important;font-weight:600}
+#manager-dashboard .chart-grid{gap:15px;margin-top:14px}
+#manager-dashboard .chart-box{border:1px solid rgba(255,255,255,.13)!important;border-radius:20px!important;background:linear-gradient(145deg,rgba(255,255,255,.075),rgba(255,255,255,.018)),rgba(17,27,45,.68)!important;padding:20px!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.07),0 14px 30px rgba(0,0,0,.13)!important;backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px)}
+#manager-dashboard .chart-box h3{color:#edf3fb!important;font-size:15px!important;margin-bottom:15px}#manager-dashboard .export-buttons{display:flex;gap:9px;flex-wrap:wrap;margin-top:16px}#manager-dashboard .export-buttons .btn{border-radius:11px!important;border:1px solid rgba(255,255,255,.12);box-shadow:0 5px 14px rgba(0,0,0,.12);transition:transform .2s ease,filter .2s ease}
+#managerPanel .tab-content{animation:waslaGlassIn .28s ease both}#managerPanel .tab-content:not(.active){animation:none}#managerPanel .card,#managerPanel .user-form-card,#managerPanel .table-container,#managerPanel .chart-box,#managerPanel .modal-content{border-color:rgba(255,255,255,.13)}#managerPanel input,#managerPanel select,#managerPanel textarea{border-color:rgba(255,255,255,.14)}
+@keyframes waslaGlassIn{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
+@media(max-width:640px){#managerPanel{padding:12px!important;border-radius:19px!important}.wasla-glass-hero{min-height:125px;padding:18px 16px;margin:10px 0 15px;border-radius:17px}.wasla-glass-hero p{font-size:12px}.wasla-hero-mark{width:58px;height:58px;flex-basis:58px;border-radius:17px}.wasla-hero-mark span{font-size:29px}.wasla-hero-mark i{width:5px;height:5px;right:6px;top:6px}.wasla-hero-mark i:nth-of-type(2){left:7px;bottom:9px}.wasla-hero-mark i:nth-of-type(3){right:9px;bottom:6px}#managerTabs{gap:5px;padding:6px;border-radius:13px}#managerTabs .tab-btn{padding:9px 11px!important;font-size:12px}#managerStats.stats-advanced{gap:8px}#managerStats .stat-card{min-height:112px;padding:12px 8px!important;border-radius:14px!important}#managerStats .label{font-size:10px!important}#manager-dashboard .chart-box{padding:14px!important;border-radius:16px!important}}
+@media(prefers-reduced-motion:reduce){#managerPanel .tab-content,#managerStats .stat-card,#managerTabs .tab-btn{animation:none!important;transition:none!important}}
+</style>
+
 </head>
 <body class="login-mode">
 <div id="wSplash" aria-hidden="true"><div class="wsp-ring"></div><div class="wsp-logo" id="wspLogo"></div><div class="wsp-name">Wasla</div><div class="wsp-tag">connect with your life</div><div class="wsp-bar"><i></i></div></div>
@@ -2237,8 +2271,17 @@ html.w-light { color-scheme: light; }
 
         <!-- ===== لوحة المدير ===== -->
         <div class="panel" id="managerPanel">
-            <h2 style="color:#2ecc71;">👨‍💼 لوحة المدير</h2>
+            <h2 class="wasla-manager-title" style="color:#2ecc71;">👨‍💼 لوحة المدير</h2>
             
+            <section class="wasla-glass-hero" aria-label="ملخص لوحة الإدارة">
+                <div class="wasla-hero-copy">
+                    <span class="wasla-hero-eyebrow"><span class="wasla-live-dot"></span> WASLA • CONTROL CENTER</span>
+                    <h2>كل تفاصيل شغلك في مكان واحد</h2>
+                    <p>تابع الطلبات والصيانة والفريق من لوحة تحكم واحدة.</p>
+                </div>
+                <div class="wasla-hero-mark" aria-hidden="true"><span>W</span><i></i><i></i><i></i></div>
+            </section>
+
             <!-- تبويبات المدير -->
             <div class="manager-tabs" id="managerTabs">
                 <button class="tab-btn active" data-tab="manager-dashboard" onclick="switchManagerTab('manager-dashboard')">📊 لوحة التحكم</button>
