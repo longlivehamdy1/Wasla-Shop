@@ -1867,6 +1867,11 @@
   --m-mut:#8c97b8; --m-txt:#e6ebff; --m-red:#e74c3c; --m-green:#22c55e; --m-amber:#f5a524;
   --m-blue:#2f5fd0; --m-orange:#c26a0a; --m-purple:#7c3fc4; --m-teal:#0e8a9c;
 }
+/* الوضع الفاتح: نفس متغيرات تصميم الموبايل لكن بألوان فاتحة، عشان النصوص والكروت تفضل واضحة */
+html.w-light {
+  --m-bg:#f1f4fb; --m-card:#ffffff; --m-card2:#f4f6fc; --m-line:rgba(30,40,90,.14);
+  --m-mut:#5b6486; --m-txt:#1f2440;
+}
 html body { font-family:'Inter','Segoe UI',Tahoma,Geneva,Verdana,sans-serif; color:var(--m-txt); }
 html body:not(.login-mode) { background:var(--m-bg); }
 html body:not(.login-mode) #wNet { opacity:.18; }
