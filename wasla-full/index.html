@@ -11,7 +11,7 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Wasla">
-    <script>try{if(localStorage.getItem('wasla_theme')==='light')document.documentElement.classList.add('w-light')}catch(e){}</script>
+    <script>try{var _wl=localStorage.getItem('wasla_lang')||'ar';document.documentElement.setAttribute('lang',_wl);document.documentElement.setAttribute('dir',_wl==='en'?'ltr':'rtl')}catch(e){}</script>
     <script>try{var _a=localStorage.getItem('wasla_accent');if(_a)document.documentElement.setAttribute('data-accent',_a)}catch(e){}</script>
     <!-- Chart.js للرسوم البيانية -->
     <script defer src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -92,9 +92,9 @@
         ::view-transition-old(root), ::view-transition-new(root) { animation: none; mix-blend-mode: normal; }
         .w-hbtn { background: rgba(255,255,255,0.08); color: #ccd6f6; border: 1px solid rgba(255,255,255,0.15); border-radius: 10px; padding: 6px 10px; cursor: pointer; font-size: 13px; }
         .w-hbtn:hover { background: rgba(255,255,255,0.16); }
-        #wThemeBtn { min-width: 92px; transition: background .2s ease, transform .2s ease; }
-        #wThemeBtn:active { transform: scale(.97); }
-        #wThemeBtn:focus-visible { outline: 2px solid var(--accent, #ff5b5b); outline-offset: 3px; }
+        #wLangBtn { min-width: 92px; transition: background .2s ease, transform .2s ease; }
+        #wLangBtn:active { transform: scale(.97); }
+        #wLangBtn:focus-visible { outline: 2px solid var(--accent, #ff5b5b); outline-offset: 3px; }
         html { color-scheme: dark; }
         html.w-light { color-scheme: light; }
         #wSearchBtn { display: none; }
@@ -2048,15 +2048,15 @@ body{background:radial-gradient(ellipse at 8% 8%,rgba(32,129,185,.17),transparen
             <img src="data:image/png;base64,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" alt="Wasla" class="brand-logo">
             <div class="brand-text">
                 <h1>Wasla<span class="brand-tagline">connect with your life</span></h1>
-                <span class="brand-sub">أنظمة المراقبة · البصمة · الشبكات · نقاط البيع</span>
+                <span class="brand-sub" data-i18n="header.sub">أنظمة المراقبة · البصمة · الشبكات · نقاط البيع</span>
             </div>
         </div>
         <div class="user-info">
             <span id="userDisplay" style="color:#8892b0;"></span>
-            <button class="w-hbtn" id="wSearchBtn" type="button" title="بحث سريع (Ctrl+K)">🔎 بحث</button>
-            <button class="w-hbtn" id="wThemeBtn" type="button" title="تبديل الوضع الفاتح/الداكن">🌙</button>
-            <button class="btn btn-outline btn-sm" onclick="openPasswordModal(false)" id="pwBtn" style="display:none;">🔑 كلمة المرور</button>
-            <button class="btn btn-danger btn-sm" onclick="logout()" id="logoutBtn" style="display:none;">🚪 خروج</button>
+            <button class="w-hbtn" id="wSearchBtn" type="button" title="بحث سريع (Ctrl+K)" data-i18n="header.search">🔎 بحث</button>
+            <button class="w-hbtn" id="wLangBtn" type="button" title="Switch language / تبديل اللغة">🌐 EN</button>
+            <button class="btn btn-outline btn-sm" onclick="openPasswordModal(false)" id="pwBtn" style="display:none;" data-i18n="header.password">🔑 كلمة المرور</button>
+            <button class="btn btn-danger btn-sm" onclick="logout()" id="logoutBtn" style="display:none;" data-i18n="header.logout">🚪 خروج</button>
         </div>
     </div>
 
@@ -2066,7 +2066,7 @@ body{background:radial-gradient(ellipse at 8% 8%,rgba(32,129,185,.17),transparen
     <!-- سبينر تحميل عام -->
     <div class="loading-overlay" id="loadingOverlay">
         <div class="spinner"></div>
-        <div class="loading-text" id="loadingText">⏳ جاري التنفيذ...</div>
+        <div class="loading-text" id="loadingText" data-i18n="loading.default">⏳ جاري التنفيذ...</div>
     </div>
 
     <!-- لايت بوكس لعرض صور الجهاز -->
@@ -2118,43 +2118,43 @@ body{background:radial-gradient(ellipse at 8% 8%,rgba(32,129,185,.17),transparen
         <div class="login-section">
             <div class="login-box" id="loginBox">
                 <h2>Login Here</h2>
-                <p class="login-sub">
+                <p class="login-sub" data-i18n="login.sub">
                     أدخل اسم المستخدم <strong>أو</strong> رقم الموبايل
                 </p>
                 <div class="field-icon">
-                    <input type="text" id="loginUsername" placeholder="اسم المستخدم أو رقم الموبايل">
+                    <input type="text" id="loginUsername" placeholder="اسم المستخدم أو رقم الموبايل" data-i18n-ph="login.usernamePh">
                     <span class="field-ico">👤</span>
                 </div>
                 <div class="password-wrapper">
-                    <input type="password" id="loginPassword" placeholder="كلمة المرور">
+                    <input type="password" id="loginPassword" placeholder="كلمة المرور" data-i18n-ph="login.passwordPh">
                     <button class="toggle-password" onclick="togglePasswordVisibility('loginPassword', this)" type="button">👁️</button>
                 </div>
                 <div class="login-options-row">
-                    <label class="remember-me"><input type="checkbox" id="rememberMeChk"> تذكرني</label>
-                    <a href="#" class="forgot-link" onclick="event.preventDefault(); showToast('📞 تواصل مع مدير النظام لإعادة تعيين كلمة المرور', 'info', 4000);">نسيت كلمة المرور؟</a>
+                    <label class="remember-me"><input type="checkbox" id="rememberMeChk"> <span data-i18n="login.remember">تذكرني</span></label>
+                    <a href="#" class="forgot-link" onclick="event.preventDefault(); showToast('📞 تواصل مع مدير النظام لإعادة تعيين كلمة المرور', 'info', 4000);" data-i18n="login.forgot">نسيت كلمة المرور؟</a>
                 </div>
-                <button class="login-submit-btn" onclick="login()">↪ تسجيل الدخول</button>
+                <button class="login-submit-btn" onclick="login()" data-i18n="login.submit">↪ تسجيل الدخول</button>
                 <div class="login-error" id="loginError"></div>
-                <p class="auth-switch">مش عندك حساب؟ <a href="#" onclick="event.preventDefault(); toggleAuthBox();">إنشاء حساب جديد</a></p>
+                <p class="auth-switch"><span data-i18n="login.switchText">مش عندك حساب؟</span> <a href="#" onclick="event.preventDefault(); toggleAuthBox();" data-i18n="login.switchLink">إنشاء حساب جديد</a></p>
             </div>
             <div class="login-box" id="registerBox" style="display:none;">
-                <h2>إنشاء حساب</h2>
+                <h2 data-i18n="register.title">إنشاء حساب</h2>
                 <p class="login-sub">
-                    <span class="required-star">*</span> رقم الموبايل إجباري
+                    <span class="required-star">*</span> <span data-i18n="register.sub">رقم الموبايل إجباري</span>
                 </p>
                 <div class="field-icon">
-                    <input type="text" id="publicClientUsername" placeholder="اسم المستخدم الجديد">
+                    <input type="text" id="publicClientUsername" placeholder="اسم المستخدم الجديد" data-i18n-ph="register.usernamePh">
                     <span class="field-ico">👤</span>
                 </div>
                 <div class="password-wrapper">
-                    <input type="password" id="publicClientPassword" placeholder="كلمة المرور">
+                    <input type="password" id="publicClientPassword" placeholder="كلمة المرور" data-i18n-ph="login.passwordPh">
                     <button class="toggle-password" onclick="togglePasswordVisibility('publicClientPassword', this)" type="button">👁️</button>
                 </div>
-                <input type="tel" id="publicClientPhone" placeholder="📱 رقم الموبايل *" required>
-                <input type="email" id="publicClientEmail" placeholder="📧 البريد الإلكتروني (اختياري)">
-                <button class="login-submit-btn" onclick="addPublicClient()">➕ إضافة عميل جديد</button>
+                <input type="tel" id="publicClientPhone" placeholder="📱 رقم الموبايل *" required data-i18n-ph="register.phonePh">
+                <input type="email" id="publicClientEmail" placeholder="📧 البريد الإلكتروني (اختياري)" data-i18n-ph="register.emailPh">
+                <button class="login-submit-btn" onclick="addPublicClient()" data-i18n="register.submit">➕ إضافة عميل جديد</button>
                 <div id="publicClientMsg" class="login-success"></div>
-                <p class="auth-switch">عندك حساب بالفعل؟ <a href="#" onclick="event.preventDefault(); toggleAuthBox();">تسجيل الدخول</a></p>
+                <p class="auth-switch"><span data-i18n="register.switchText">عندك حساب بالفعل؟</span> <a href="#" onclick="event.preventDefault(); toggleAuthBox();" data-i18n="register.switchLink">تسجيل الدخول</a></p>
             </div>
         </div>
             </section>
@@ -2190,75 +2190,75 @@ body{background:radial-gradient(ellipse at 8% 8%,rgba(32,129,185,.17),transparen
             <div class="stat-card">
                 <div class="icon-big">📦</div>
                 <div class="number" id="statTotal">0</div>
-                <div class="label">إجمالي الطلبات</div>
+                <div class="label" data-i18n="stat.total">إجمالي الطلبات</div>
             </div>
             <div class="stat-card">
                 <div class="icon-big">⏳</div>
                 <div class="number" id="statPending">0</div>
-                <div class="label">قيد الانتظار</div>
+                <div class="label" data-i18n="stat.pending">قيد الانتظار</div>
             </div>
             <div class="stat-card">
                 <div class="icon-big">📥</div>
                 <div class="number" id="statCashier">0</div>
-                <div class="label">استلمه الكاشير</div>
+                <div class="label" data-i18n="stat.cashier">استلمه الكاشير</div>
             </div>
             <div class="stat-card">
                 <div class="icon-big">✅</div>
                 <div class="number" id="statManager">0</div>
-                <div class="label">في المخزن</div>
+                <div class="label" data-i18n="stat.manager">في المخزن</div>
             </div>
             <div class="stat-card">
                 <div class="icon-big">🔔</div>
                 <div class="number" id="statReady">0</div>
-                <div class="label">جاهز للاستلام</div>
+                <div class="label" data-i18n="stat.ready">جاهز للاستلام</div>
             </div>
             <div class="stat-card">
                 <div class="icon-big">📊</div>
                 <div class="number" id="statAvgProgress">0%</div>
-                <div class="label">متوسط الصيانة</div>
+                <div class="label" data-i18n="stat.progress">متوسط الصيانة</div>
             </div>
             <div class="stat-card">
                 <div class="icon-big">⭐</div>
                 <div class="number" id="statAvgRating">0.0</div>
-                <div class="label">متوسط التقييم</div>
+                <div class="label" data-i18n="stat.rating">متوسط التقييم</div>
             </div>
             <div class="stat-card">
                 <div class="icon-big">🚀</div>
                 <div class="number" id="statCompleted">0</div>
-                <div class="label">مكتمل الصيانة</div>
+                <div class="label" data-i18n="stat.completed">مكتمل الصيانة</div>
             </div>
         </div>
 
         <!-- ===== تفعيل الإشعارات ===== -->
         <div class="notification-banner">
-            <span class="text">🔔 <strong>تنبيه:</strong> عند وصول نسبة الصيانة إلى 100%، سيتم إرسال إشعار للموبايل</span>
-            <button class="btn btn-notification" onclick="requestNotificationPermission()" style="background:linear-gradient(90deg,#e74c3c,#c0392b);color:#fff;padding:8px 16px;font-size:13px;border:none;border-radius:10px;cursor:pointer;animation:pulse 1.5s infinite;">🔔 تفعيل الإشعارات</button>
+            <span class="text" data-i18n="notif.text">🔔 <strong>تنبيه:</strong> عند وصول نسبة الصيانة إلى 100%، سيتم إرسال إشعار للموبايل</span>
+            <button class="btn btn-notification" onclick="requestNotificationPermission()" style="background:linear-gradient(90deg,#e74c3c,#c0392b);color:#fff;padding:8px 16px;font-size:13px;border:none;border-radius:10px;cursor:pointer;animation:pulse 1.5s infinite;" data-i18n="notif.btn">🔔 تفعيل الإشعارات</button>
         </div>
 
         <!-- ===== لوحة العميل ===== -->
         <div class="panel" id="clientPanel">
-            <h2 style="color:#3498db;">👤 لوحة العميل</h2>
-            <div class="wc-head"><b>🛍️ اختار القسم اللي محتاجه</b><span>اضغط على القسم وهتلاقي كل الأجهزة والخدمات</span></div>
+            <h2 style="color:#3498db;" data-i18n="client.title">👤 لوحة العميل</h2>
+            <div class="wc-head"><b data-i18n="client.head">🛍️ اختار القسم اللي محتاجه</b><span data-i18n="client.headSub">اضغط على القسم وهتلاقي كل الأجهزة والخدمات</span></div>
             <div class="wc-cats" id="clientCats"></div>
             <div class="cards">
-                <div class="card"><div class="icon">📦</div><h3>طلب تسليم جهاز</h3><button class="btn" onclick="openModal('requestModal')">طلب جديد</button></div>
-                <div class="card"><div class="icon">📋</div><h3>طلباتي</h3><button class="btn" onclick="loadClientRequests()">عرض</button></div>
-                <div class="card"><div class="icon">💬</div><h3>التواصل مع الكاشير</h3><button class="btn btn-chat" onclick="openChatModal()">فتح الشات</button></div>
-                <div class="card"><div class="icon">⭐</div><h3>تقييم الخدمة</h3><button class="btn btn-warning" onclick="openRatingModal()">تقييم</button></div>
-                <div class="card"><div class="icon">🎁</div><h3>نقاط الولاء</h3><div id="clientLoyaltyPoints" style="font-size:26px;font-weight:900;color:#ff5b5b;margin-top:4px;">0</div><div style="font-size:12px;color:#8892b0;">كل طلب تستلمه يضيفلك نقاط</div></div>
+                <div class="card"><div class="icon">📦</div><h3 data-i18n="client.newRequestTitle">طلب تسليم جهاز</h3><button class="btn" onclick="openModal('requestModal')" data-i18n="client.newRequestBtn">طلب جديد</button></div>
+                <div class="card"><div class="icon">📋</div><h3 data-i18n="client.myRequestsTitle">طلباتي</h3><button class="btn" onclick="loadClientRequests()" data-i18n="client.myRequestsBtn">عرض</button></div>
+                <div class="card"><div class="icon">💬</div><h3 data-i18n="client.chatTitle">التواصل مع الكاشير</h3><button class="btn btn-chat" onclick="openChatModal()" data-i18n="client.chatBtn">فتح الشات</button></div>
+                <div class="card"><div class="icon">⭐</div><h3 data-i18n="client.ratingTitle">تقييم الخدمة</h3><button class="btn btn-warning" onclick="openRatingModal()" data-i18n="client.ratingBtn">تقييم</button></div>
+                <div class="card"><div class="icon">🎁</div><h3 data-i18n="client.loyaltyTitle">نقاط الولاء</h3><div id="clientLoyaltyPoints" style="font-size:26px;font-weight:900;color:#ff5b5b;margin-top:4px;">0</div><div style="font-size:12px;color:#8892b0;" data-i18n="client.loyaltyNote">كل طلب تستلمه يضيفلك نقاط</div></div>
             </div>
             <div id="clientRequestsContainer"></div>
         </div>
 
         <!-- ===== لوحة الكاشير ===== -->
         <div class="panel" id="cashierPanel">
-            <h2 style="color:#f39c12;">💰 لوحة الكاشير</h2>
+            <h2 style="color:#f39c12;" data-i18n="cashier.title">💰 لوحة الكاشير</h2>
             <div class="cards">
-                <div class="card"><div class="icon">📥</div><h3>استلام جهاز</h3><button class="btn btn-warning" onclick="openModal('receiveModal')">استلام</button></div>
-                <div class="card"><div class="icon">📊</div><h3>تحديث نسبة الصيانة</h3><button class="btn btn-warning" onclick="openModal('progressModal')">تحديث</button></div>
-                <div class="card"><div class="icon">🖨️</div><h3>طباعة إيصال</h3><button class="btn btn-warning" onclick="openModal('invoiceModal')">طباعة</button></div>
-                <div class="card"><div class="icon">🏬</div><h3>إدارة المخازن</h3><button class="btn btn-warning" onclick="whOpenModal()">فتح المخازن</button></div>
-                <div class="card"><div class="icon">💬</div><h3>الشات مع العملاء</h3><button class="btn btn-chat" onclick="openChatModal()">فتح الشات</button></div>
+                <div class="card"><div class="icon">📥</div><h3 data-i18n="cashier.receiveTitle">استلام جهاز</h3><button class="btn btn-warning" onclick="openModal('receiveModal')" data-i18n="cashier.receiveBtn">استلام</button></div>
+                <div class="card"><div class="icon">📊</div><h3 data-i18n="cashier.progressTitle">تحديث نسبة الصيانة</h3><button class="btn btn-warning" onclick="openModal('progressModal')" data-i18n="cashier.progressBtn">تحديث</button></div>
+                <div class="card"><div class="icon">🖨️</div><h3 data-i18n="cashier.invoiceTitle">طباعة إيصال</h3><button class="btn btn-warning" onclick="openModal('invoiceModal')" data-i18n="cashier.invoiceBtn">طباعة</button></div>
+                <div class="card"><div class="icon">🏬</div><h3 data-i18n="cashier.warehouse">إدارة المخازن</h3><button class="btn btn-warning" onclick="whOpenModal()" data-i18n="cashier.warehouseBtn">فتح المخازن</button></div>
+                <div class="card"><div class="icon">💬</div><h3 data-i18n="cashier.chatTitle">الشات مع العملاء</h3><button class="btn btn-chat" onclick="openChatModal()" data-i18n="cashier.chatBtn">فتح الشات</button></div>
             </div>
             <div id="cashierRequestsContainer"></div>
         </div>
@@ -2268,7 +2268,7 @@ body{background:radial-gradient(ellipse at 8% 8%,rgba(32,129,185,.17),transparen
             <h2 style="color:#9b59b6;">🔧 لوحة الفني</h2>
             <div class="cards">
                 <div class="card"><div class="icon">📥</div><h3>الأجهزة المرسلة لي</h3><button class="btn" onclick="loadTechnicianRequests()">تحديث القائمة</button></div>
-                <div class="card"><div class="icon">📊</div><h3>تحديث نسبة الصيانة</h3><button class="btn" onclick="openModal('progressModal')">تحديث</button></div>
+                <div class="card"><div class="icon">📊</div><h3 data-i18n="cashier.progressTitle">تحديث نسبة الصيانة</h3><button class="btn" onclick="openModal('progressModal')" data-i18n="cashier.progressBtn">تحديث</button></div>
                 <div class="card"><div class="icon">💬</div><h3>الشات مع الكاشير</h3><button class="btn btn-chat" onclick="openChatModal()">فتح الشات</button></div>
             </div>
             <div id="technicianRequestsContainer"></div>
@@ -2306,14 +2306,14 @@ body{background:radial-gradient(ellipse at 8% 8%,rgba(32,129,185,.17),transparen
             <!-- تبويب لوحة التحكم -->
             <div class="tab-content active" id="manager-dashboard">
                 <div class="stats-advanced" id="managerStats">
-                    <div class="stat-card"><div class="icon-big">📦</div><div class="number" id="mStatTotal">0</div><div class="label">إجمالي الطلبات</div></div>
-                    <div class="stat-card"><div class="icon-big">⏳</div><div class="number" id="mStatPending">0</div><div class="label">قيد الانتظار</div></div>
-                    <div class="stat-card"><div class="icon-big">📥</div><div class="number" id="mStatCashier">0</div><div class="label">استلمه الكاشير</div></div>
-                    <div class="stat-card"><div class="icon-big">✅</div><div class="number" id="mStatManager">0</div><div class="label">في المخزن</div></div>
-                    <div class="stat-card"><div class="icon-big">🔔</div><div class="number" id="mStatReady">0</div><div class="label">جاهز للاستلام</div></div>
-                    <div class="stat-card"><div class="icon-big">📊</div><div class="number" id="mStatProgress">0%</div><div class="label">متوسط الصيانة</div></div>
-                    <div class="stat-card"><div class="icon-big">⭐</div><div class="number" id="mStatRating">0.0</div><div class="label">متوسط التقييم</div></div>
-                    <div class="stat-card"><div class="icon-big">🚀</div><div class="number" id="mStatCompleted">0</div><div class="label">مكتمل الصيانة</div></div>
+                    <div class="stat-card"><div class="icon-big">📦</div><div class="number" id="mStatTotal">0</div><div class="label" data-i18n="stat.total">إجمالي الطلبات</div></div>
+                    <div class="stat-card"><div class="icon-big">⏳</div><div class="number" id="mStatPending">0</div><div class="label" data-i18n="stat.pending">قيد الانتظار</div></div>
+                    <div class="stat-card"><div class="icon-big">📥</div><div class="number" id="mStatCashier">0</div><div class="label" data-i18n="stat.cashier">استلمه الكاشير</div></div>
+                    <div class="stat-card"><div class="icon-big">✅</div><div class="number" id="mStatManager">0</div><div class="label" data-i18n="stat.manager">في المخزن</div></div>
+                    <div class="stat-card"><div class="icon-big">🔔</div><div class="number" id="mStatReady">0</div><div class="label" data-i18n="stat.ready">جاهز للاستلام</div></div>
+                    <div class="stat-card"><div class="icon-big">📊</div><div class="number" id="mStatProgress">0%</div><div class="label" data-i18n="stat.progress">متوسط الصيانة</div></div>
+                    <div class="stat-card"><div class="icon-big">⭐</div><div class="number" id="mStatRating">0.0</div><div class="label" data-i18n="stat.rating">متوسط التقييم</div></div>
+                    <div class="stat-card"><div class="icon-big">🚀</div><div class="number" id="mStatCompleted">0</div><div class="label" data-i18n="stat.completed">مكتمل الصيانة</div></div>
                     <div class="stat-card"><div class="icon-big">🔴</div><div class="number" id="mStatUrgent">0</div><div class="label">طلبات عاجلة</div></div>
                     <div class="stat-card"><div class="icon-big">📦</div><div class="number" id="mStatPickedUp">0</div><div class="label">تم التسليم</div></div>
                 </div>
@@ -2579,7 +2579,7 @@ body{background:radial-gradient(ellipse at 8% 8%,rgba(32,129,185,.17),transparen
 <div class="modal" id="receiveModal">
     <div class="modal-content">
         <span class="close-btn" onclick="closeModal('receiveModal')">&times;</span>
-        <h2>📥 استلام جهاز</h2>
+        <h2 data-i18n="modal.receiveTitle">📥 استلام جهاز</h2>
         <input type="text" id="recRequestId" placeholder="معرف الطلب">
         <label style="color:#8892b0;font-size:14px;display:block;margin-top:6px;">السيريال نمبر:</label>
         <div class="input-with-camera">
@@ -2596,7 +2596,7 @@ body{background:radial-gradient(ellipse at 8% 8%,rgba(32,129,185,.17),transparen
 <div class="modal" id="progressModal">
     <div class="modal-content">
         <span class="close-btn" onclick="closeModal('progressModal')">&times;</span>
-        <h2>📊 تحديث نسبة الصيانة</h2>
+        <h2 data-i18n="modal.progressTitle">📊 تحديث نسبة الصيانة</h2>
         <input type="text" id="progRequestId" placeholder="معرف الطلب">
         <input type="number" id="progValue" placeholder="النسبة (0-100)" min="0" max="100">
         <button class="btn btn-warning" onclick="submitProgress()">تحديث</button>
@@ -2687,7 +2687,7 @@ body{background:radial-gradient(ellipse at 8% 8%,rgba(32,129,185,.17),transparen
 <div class="modal" id="invoiceModal">
     <div class="modal-content">
         <span class="close-btn" onclick="closeModal('invoiceModal')">&times;</span>
-        <h2>🖨️ طباعة إيصال</h2>
+        <h2 data-i18n="modal.invoiceTitle">🖨️ طباعة إيصال</h2>
         <div class="input-with-camera">
             <input type="text" id="invRequestId" placeholder="معرف الطلب">
             <button class="btn btn-camera btn-sm" onclick="openQRScanModal()">📷 مسح QR</button>
@@ -6664,32 +6664,98 @@ window.holdConfirm = function (message, opts) {
         w.document.close();
     };
 
-    /* --- ثيم فاتح/داكن بحركة دائرية --- */
-    var themeBtn = $('wThemeBtn'), root = document.documentElement;
-    function themeIcon() {
-        if (!themeBtn) return;
-        var light = root.classList.contains('w-light');
-        themeBtn.textContent = light ? '☀️ فاتح' : '🌙 داكن';
-        themeBtn.setAttribute('aria-label', light ? 'التبديل إلى الوضع الداكن' : 'التبديل إلى الوضع الفاتح');
-        themeBtn.setAttribute('aria-pressed', light ? 'true' : 'false');
-        themeBtn.title = light ? 'الوضع الفاتح — اضغط للتبديل إلى الداكن' : 'الوضع الداكن — اضغط للتبديل إلى الفاتح';
+    /* --- تبديل اللغة عربي/إنجليزي --- */
+    var root = document.documentElement;
+    var W_DICT = {
+        ar: {
+            'header.search': '🔎 بحث', 'header.password': '🔑 كلمة المرور', 'header.logout': '🚪 خروج',
+            'header.sub': 'أنظمة المراقبة · البصمة · الشبكات · نقاط البيع',
+            'loading.default': '⏳ جاري التنفيذ...',
+            'stat.total': 'إجمالي الطلبات', 'stat.pending': 'قيد الانتظار', 'stat.cashier': 'استلمه الكاشير',
+            'stat.manager': 'في المخزن', 'stat.ready': 'جاهز للاستلام', 'stat.progress': 'متوسط الصيانة',
+            'stat.rating': 'متوسط التقييم', 'stat.completed': 'مكتمل الصيانة',
+            'notif.text': '🔔 تنبيه: عند وصول نسبة الصيانة إلى 100%، سيتم إرسال إشعار للموبايل',
+            'notif.btn': '🔔 تفعيل الإشعارات',
+            'client.title': '👤 لوحة العميل', 'client.head': '🛍️ اختار القسم اللي محتاجه',
+            'client.headSub': 'اضغط على القسم وهتلاقي كل الأجهزة والخدمات',
+            'client.newRequestTitle': 'طلب تسليم جهاز', 'client.newRequestBtn': 'طلب جديد',
+            'client.myRequestsTitle': 'طلباتي', 'client.myRequestsBtn': 'عرض',
+            'client.chatTitle': 'التواصل مع الكاشير', 'client.chatBtn': 'فتح الشات',
+            'client.ratingTitle': 'تقييم الخدمة', 'client.ratingBtn': 'تقييم',
+            'client.loyaltyTitle': 'نقاط الولاء', 'client.loyaltyNote': 'كل طلب تستلمه يضيفلك نقاط',
+            'cashier.title': '💰 لوحة الكاشير',
+            'cashier.receiveTitle': 'استلام جهاز', 'cashier.receiveBtn': 'استلام',
+            'cashier.progressTitle': 'تحديث نسبة الصيانة', 'cashier.progressBtn': 'تحديث',
+            'cashier.invoiceTitle': 'طباعة إيصال', 'cashier.invoiceBtn': 'طباعة',
+            'cashier.warehouse': 'إدارة المخازن', 'cashier.warehouseBtn': 'فتح المخازن',
+            'cashier.chatTitle': 'الشات مع العملاء', 'cashier.chatBtn': 'فتح الشات',
+            'modal.receiveTitle': '📥 استلام جهاز', 'modal.progressTitle': '📊 تحديث نسبة الصيانة', 'modal.invoiceTitle': '🖨️ طباعة إيصال',
+            'login.sub': 'أدخل اسم المستخدم أو رقم الموبايل',
+            'login.usernamePh': 'اسم المستخدم أو رقم الموبايل', 'login.passwordPh': 'كلمة المرور',
+            'login.remember': 'تذكرني', 'login.forgot': 'نسيت كلمة المرور؟',
+            'login.submit': '↪ تسجيل الدخول',
+            'login.switchText': 'مش عندك حساب؟', 'login.switchLink': 'إنشاء حساب جديد',
+            'register.title': 'إنشاء حساب', 'register.sub': 'رقم الموبايل إجباري',
+            'register.usernamePh': 'اسم المستخدم الجديد', 'register.phonePh': '📱 رقم الموبايل *',
+            'register.emailPh': '📧 البريد الإلكتروني (اختياري)', 'register.submit': '➕ إضافة عميل جديد',
+            'register.switchText': 'عندك حساب بالفعل؟', 'register.switchLink': 'تسجيل الدخول',
+            'menu.tools': 'الأدوات', 'menu.account': 'الحساب', 'menu.search': 'بحث سريع',
+            'menu.changePassword': 'تغيير كلمة المرور', 'menu.logout': 'تسجيل الخروج'
+        },
+        en: {
+            'header.search': '🔎 Search', 'header.password': '🔑 Password', 'header.logout': '🚪 Logout',
+            'header.sub': 'Surveillance · Access Control · Networks · POS Systems',
+            'loading.default': '⏳ Loading...',
+            'stat.total': 'Total Requests', 'stat.pending': 'Pending', 'stat.cashier': 'Received by Cashier',
+            'stat.manager': 'In Warehouse', 'stat.ready': 'Ready for Pickup', 'stat.progress': 'Avg. Progress',
+            'stat.rating': 'Avg. Rating', 'stat.completed': 'Completed',
+            'notif.text': '🔔 Note: once progress reaches 100%, a mobile notification is sent',
+            'notif.btn': '🔔 Enable Notifications',
+            'client.title': '👤 Client Dashboard', 'client.head': '🛍️ Choose the category you need',
+            'client.headSub': 'Tap a category to see all devices and services',
+            'client.newRequestTitle': 'Submit a Device', 'client.newRequestBtn': 'New Request',
+            'client.myRequestsTitle': 'My Requests', 'client.myRequestsBtn': 'View',
+            'client.chatTitle': 'Chat with Cashier', 'client.chatBtn': 'Open Chat',
+            'client.ratingTitle': 'Rate the Service', 'client.ratingBtn': 'Rate',
+            'client.loyaltyTitle': 'Loyalty Points', 'client.loyaltyNote': 'Every completed request earns you points',
+            'cashier.title': '💰 Cashier Dashboard',
+            'cashier.receiveTitle': 'Receive Device', 'cashier.receiveBtn': 'Receive',
+            'cashier.progressTitle': 'Update Progress', 'cashier.progressBtn': 'Update',
+            'cashier.invoiceTitle': 'Print Receipt', 'cashier.invoiceBtn': 'Print',
+            'cashier.warehouse': 'Manage Warehouse', 'cashier.warehouseBtn': 'Open Warehouse',
+            'cashier.chatTitle': 'Chat with Clients', 'cashier.chatBtn': 'Open Chat',
+            'modal.receiveTitle': '📥 Receive Device', 'modal.progressTitle': '📊 Update Progress', 'modal.invoiceTitle': '🖨️ Print Receipt',
+            'login.sub': 'Enter your username or mobile number',
+            'login.usernamePh': 'Username or mobile number', 'login.passwordPh': 'Password',
+            'login.remember': 'Remember me', 'login.forgot': 'Forgot password?',
+            'login.submit': '↪ Login',
+            'login.switchText': "Don't have an account?", 'login.switchLink': 'Create new account',
+            'register.title': 'Create Account', 'register.sub': 'Mobile number is required',
+            'register.usernamePh': 'New username', 'register.phonePh': '📱 Mobile number *',
+            'register.emailPh': '📧 Email (optional)', 'register.submit': '➕ Add New Client',
+            'register.switchText': 'Already have an account?', 'register.switchLink': 'Login',
+            'menu.tools': 'Tools', 'menu.account': 'Account', 'menu.search': 'Quick Search',
+            'menu.changePassword': 'Change Password', 'menu.logout': 'Logout'
+        }
+    };
+    function W_T(key) {
+        var L = root.getAttribute('lang') === 'en' ? 'en' : 'ar';
+        return (W_DICT[L] && W_DICT[L][key]) || W_DICT.ar[key] || key;
     }
-    function applyInv() { root.classList.toggle('w-inv', root.classList.contains('w-light')); }
-    function flip() { root.classList.toggle('w-light'); lsSet('wasla_theme', root.classList.contains('w-light') ? 'light' : 'dark'); themeIcon(); applyInv(); }
-    new MutationObserver(applyInv).observe(document.body, { attributes: true, attributeFilter: ['class'] });
-    applyInv();
-    if (themeBtn) themeBtn.addEventListener('click', function (e) {
-        var x = e.clientX || innerWidth - 40, y = e.clientY || 40;
-        var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-        if (!document.startViewTransition || reduce) { flip(); return; }
-        var r = Math.hypot(Math.max(x, innerWidth - x), Math.max(y, innerHeight - y));
-        var t = document.startViewTransition(flip);
-        t.ready.then(function () {
-            root.animate({ clipPath: ['circle(0px at ' + x + 'px ' + y + 'px)', 'circle(' + r + 'px at ' + x + 'px ' + y + 'px)'] },
-                { duration: 650, easing: 'ease-in-out', pseudoElement: '::view-transition-new(root)' });
-        }).catch(function () {});
+    window.W_T = W_T;
+    var langBtn = $('wLangBtn');
+    function applyLang(lang) {
+        root.setAttribute('lang', lang);
+        root.setAttribute('dir', lang === 'en' ? 'ltr' : 'rtl');
+        document.querySelectorAll('[data-i18n]').forEach(function (el) { el.textContent = W_T(el.getAttribute('data-i18n')); });
+        document.querySelectorAll('[data-i18n-ph]').forEach(function (el) { el.setAttribute('placeholder', W_T(el.getAttribute('data-i18n-ph'))); });
+        if (langBtn) { langBtn.textContent = lang === 'en' ? '🌐 AR' : '🌐 EN'; langBtn.title = lang === 'en' ? 'التبديل إلى العربية' : 'Switch to English'; }
+        try { lsSet('wasla_lang', lang); } catch (e) {}
+    }
+    if (langBtn) langBtn.addEventListener('click', function () {
+        applyLang(root.getAttribute('lang') === 'en' ? 'ar' : 'en');
     });
-    themeIcon();
+    applyLang(root.getAttribute('lang') === 'en' ? 'en' : 'ar');
 
     /* --- إظهار زرار البحث بعد الدخول بس --- */
     var lo = $('logoutBtn'), sb = $('wSearchBtn');
@@ -7839,13 +7905,13 @@ function whDoMove() {
       var extra = [['manager-chats', '💬', 'المحادثات'], ['manager-ratings', '⭐', 'التقييمات'], ['manager-logs', '📝', 'السجل'], ['manager-reports', '📊', 'التقارير'], ['manager-parts', '🔩', 'قطع الغيار'], ['manager-warehouses', '🏬', 'المخازن'], ['manager-settings', '⚙️', 'الإعدادات']];
       h += '<div class="m-sec">الأقسام</div><div class="m-grid">' + extra.map(function (e) { return '<button class="m-tile" data-tab="' + e[0] + '"><span class="e">' + e[1] + '</span>' + e[2] + '</button>'; }).join('') + '</div>';
     }
-    var dark = !document.documentElement.classList.contains('w-light');
-    if (curRole === 'cashier') h += '<div class="m-sec">الأدوات</div><button class="m-row" data-a="wh"><span>🏬</span>إدارة المخازن</button>';
-    h += '<div class="m-sec">الحساب</div>' +
-      '<button class="m-row" data-a="search"><span>🔎</span>بحث سريع</button>' +
-      '<button class="m-row" data-a="theme"><span>' + (dark ? '☀️' : '🌙') + '</span>' + (dark ? 'الوضع الفاتح' : 'الوضع الداكن') + '</button>' +
-      '<button class="m-row" data-a="pw"><span>🔑</span>تغيير كلمة المرور</button>' +
-      '<button class="m-row danger" data-a="out"><span>🚪</span>تسجيل الخروج</button>';
+    var curLang = document.documentElement.getAttribute('lang') === 'en' ? 'en' : 'ar';
+    if (curRole === 'cashier') h += '<div class="m-sec">' + W_T('menu.tools') + '</div><button class="m-row" data-a="wh"><span>🏬</span>' + W_T('cashier.warehouse') + '</button>';
+    h += '<div class="m-sec">' + W_T('menu.account') + '</div>' +
+      '<button class="m-row" data-a="search"><span>🔎</span>' + W_T('menu.search') + '</button>' +
+      '<button class="m-row" data-a="lang"><span>🌐</span>' + (curLang === 'en' ? 'العربية' : 'English') + '</button>' +
+      '<button class="m-row" data-a="pw"><span>🔑</span>' + W_T('menu.changePassword') + '</button>' +
+      '<button class="m-row danger" data-a="out"><span>🚪</span>' + W_T('menu.logout') + '</button>';
     $('mSheetBody').innerHTML = h;
     $('mSheet').classList.add('open');
   }
@@ -7858,7 +7924,7 @@ function whDoMove() {
     buzz();
     if (t.dataset.tab) { closeSheet(); call('switchManagerTab', t.dataset.tab); top(); setTimeout(sync, 60); return; }
     var a = t.dataset.a; closeSheet();
-    if (a === 'theme') { var b = $('wThemeBtn'); if (b) b.click(); }
+    if (a === 'lang') { var b = $('wLangBtn'); if (b) b.click(); }
     else if (a === 'search') { var s = $('wSearchBtn'); if (s) s.click(); }
     else if (a === 'wh') call('whOpenModal');
     else if (a === 'pw') call('openPasswordModal', false);
