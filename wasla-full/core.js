@@ -210,7 +210,10 @@ async function rateLimited(key, max, windowSec) {
 }
 
 // ---------------------------------------------------------------- العرض حسب الدور
-const pubUser = u => ({ username: u.username, role: u.role, clientType: u.role === 'client' && u.clientType === 'gov' ? 'gov' : '', phone: u.phone || '', email: u.email || '', mustChange: !!u.mustChange });
+const isGovClient = u => u.role === 'client' && u.clientType === 'gov';
+const pubUser = u => ({ username: u.username, role: u.role, clientType: isGovClient(u) ? 'gov' : '', isDept: isGovClient(u) && !!u.isDept, unitName: isGovClient(u) && u.isDept ? str(u.unitName, 80) : '', parent: isGovClient(u) && u.parent ? u.parent : '', phone: u.phone || '', email: u.email || '', mustChange: !!u.mustChange });
+// أسماء الحسابات اللي المستخدم يقدر يشوف أجهزتها: نفسه + (لو حساب إدارة) كل الوحدات التابعة له
+const ownedNames = (db, u) => { const s = new Set([u.username]); if (isGovClient(u) && u.isDept) for (const x of db.users) if (isGovClient(x) && x.parent === u.username) s.add(x.username); return s; };
 function viewFor(db, user, ver) {
     const key = ver + '|' + user.username;
     if (viewCache.has(key)) return viewCache.get(key);
@@ -228,15 +231,16 @@ function viewFor(db, user, ver) {
         out.chats = db.chats.filter(c => c.sender === me || c.receiver === me);
         out.parts = db.parts.map(({ cost, ...p }) => p); out.settings = { companyPhone: s.companyPhone, warrantyDays: s.warrantyDays };
     } else {
-        out.users = db.users.filter(u => u.role === 'cashier' || u.role === 'manager' || u.username === me)
-            .map(u => ({ username: u.username, role: u.role, phone: u === user ? u.phone || '' : '', email: u === user ? u.email || '' : '', mustChange: u === user && !!u.mustChange }));
-        out.requests = db.requests.filter(r => r.clientName === me).map(r => {
+        const owned = ownedNames(db, user);
+        out.users = db.users.filter(u => u.role === 'cashier' || u.role === 'manager' || owned.has(u.username))
+            .map(u => ({ username: u.username, role: u.role, ...(isGovClient(u) ? { clientType: 'gov', isDept: !!u.isDept, unitName: u.isDept ? str(u.unitName, 80) : '', parent: u.parent || '' } : {}), phone: u === user ? u.phone || '' : '', email: u === user ? u.email || '' : '', mustChange: u === user && !!u.mustChange }));
+        out.requests = db.requests.filter(r => owned.has(r.clientName)).map(r => {
             const { internalNotes, techHandedBackAt, techHandedBackTs, ...rest } = r;
             if (rest.partsUsed) rest.partsUsed = rest.partsUsed.map(p => ({ name: p.name, qty: p.qty }));
             return rest;
         });
         out.chats = db.chats.filter(c => c.sender === me || c.receiver === me);
-        out.ratings = db.ratings.filter(r => r.clientName === me);
+        out.ratings = db.ratings.filter(r => owned.has(r.clientName));
         out.settings = { companyPhone: s.companyPhone, warrantyDays: s.warrantyDays };
     }
     const json = JSON.stringify(out);
@@ -258,6 +262,9 @@ function setField(target, k, v) {
         for (const it of v) if (!have.has(itemKey(it))) target[k].push(it);
     } else target[k] = v;
 }
+
+const findDept = (db, name) => name ? db.users.find(x => x.username === name && isGovClient(x) && x.isDept) : undefined;
+const detachUnits = (db, dept) => { for (const x of db.users) if (x.parent === dept) delete x.parent; };
 
 async function applyOps(db, user, rawOps, rejected, ctx) {
     const ops = cleanDeep(rawOps);
@@ -301,7 +308,7 @@ async function applyOps(db, user, rawOps, rejected, ctx) {
                 setField(ex, k, v);
             }
         } else if (role === 'client') {
-            if (ex.clientName !== me) { rej('طلب لا يخصك'); continue; }
+            if (!ownedNames(db, user).has(ex.clientName)) { rej('طلب لا يخصك'); continue; }
             for (const [k, v] of Object.entries(fields)) {
                 if (!CLIENT_FIELDS.includes(k)) continue;
                 if (k === 'status') {
@@ -331,7 +338,7 @@ async function applyOps(db, user, rawOps, rejected, ctx) {
     for (const rt of ((ops.ratings || {}).append || [])) {
         if (role !== 'client' && !isMgr) continue;
         const rq = db.requests.find(r => r.id === rt.requestId);
-        if (!rq || (role === 'client' && rq.clientName !== me)) { rej('تقييم غير صالح'); continue; }
+        if (!rq || (role === 'client' && !ownedNames(db, user).has(rq.clientName))) { rej('تقييم غير صالح'); continue; }
         db.ratings.push({ requestId: rt.requestId, clientName: rq.clientName, rating: Math.max(1, Math.min(5, Number(rt.rating) || 0)), comment: str(rt.comment, 500), timestamp: str(rt.timestamp, 60) });
     }
 
@@ -360,11 +367,21 @@ async function applyOps(db, user, rawOps, rejected, ctx) {
             if (!ex) {
                 if (!patch.password || String(patch.password).length < 4) { rej('كلمة مرور قصيرة'); continue; }
                 if (!['client', 'cashier', 'technician', 'manager'].includes(patch.role)) { rej('دور غير صالح'); continue; }
-                db.users.push({ username: str(patch.username, 40), passwordHash: hashPassword(patch.password), role: patch.role, phone: phone || '', email: str(patch.email, 100), mustChange: true, ...(patch.role === 'client' && patch.clientType === 'gov' ? { clientType: 'gov' } : {}) });
+                db.users.push({ username: str(patch.username, 40), passwordHash: hashPassword(patch.password), role: patch.role, phone: phone || '', email: str(patch.email, 100), mustChange: true, ...(patch.role === 'client' && patch.clientType === 'gov' ? { clientType: 'gov', ...(patch.isDept ? { isDept: true, unitName: str(patch.unitName, 80).trim() } : (findDept(db, patch.parent) ? { parent: patch.parent } : {})) } : {}) });
             } else {
+                if (patch.unitName !== undefined && isGovClient(ex) && ex.isDept) ex.unitName = str(patch.unitName, 80).trim();
                 if (phone !== undefined) ex.phone = phone;
                 if (patch.email !== undefined) ex.email = str(patch.email, 100);
                 if (patch.clientType !== undefined && ex.role === 'client') ex.clientType = patch.clientType === 'gov' ? 'gov' : '';
+                if (ex.role === 'client' && ex.clientType !== 'gov') { detachUnits(db, ex.username); delete ex.isDept; delete ex.parent; }
+                if (isGovClient(ex)) {
+                    if (patch.isDept !== undefined) {
+                        if (patch.isDept) { ex.isDept = true; delete ex.parent; } else { delete ex.isDept; detachUnits(db, ex.username); }
+                    }
+                    if (patch.parent !== undefined && !ex.isDept) {
+                        if (findDept(db, patch.parent) && patch.parent !== ex.username) ex.parent = patch.parent; else delete ex.parent;
+                    }
+                }
                 if (patch.role && ex.username !== 'manager' && ['client', 'cashier', 'technician', 'manager'].includes(patch.role)) ex.role = patch.role;
                 if (patch.password) {
                     if (String(patch.password).length < 4) { rej('كلمة مرور قصيرة'); continue; }
@@ -376,6 +393,7 @@ async function applyOps(db, user, rawOps, rejected, ctx) {
         for (const name of (ops.users.remove || [])) {
             if (name === 'manager' || name === me) continue;
             db.users = db.users.filter(u => u.username !== name);
+            detachUnits(db, name);
             ctx.kill.add(name);
         }
     }
