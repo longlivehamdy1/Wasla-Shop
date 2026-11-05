@@ -2350,9 +2350,7 @@ body{background:radial-gradient(ellipse at 8% 8%,rgba(32,129,185,.17),transparen
                             <option value="technician">🔧 فني صيانة</option>
                             <option value="manager">👨‍💼 مدير</option>
                         </select>
-                        <select id="mNewUserClientType" title="نوع العميل" onchange="refreshNewUserDeptUI()"><option value="">👤 عميل عادي</option><option value="gov">🏛️ عميل حكومي (وحدة)</option><option value="dept">🏢 حساب إدارة (يشوف أجهزة كل وحداته)</option></select>
-                        <input type="text" id="mNewUserUnitName" class="user-form-full" placeholder="الوحدة / القسم التابع" style="display:none">
-                        <select id="mNewUserParent" title="الإدارة التابعة لها الوحدة" style="display:none"></select>
+                        <select id="mNewUserClientType" title="نوع العميل" onchange="refreshNewUserDeptUI()"><option value="">👤 عميل عادي</option><option value="gov">🏛️ عميل حكومي</option><option value="dept">🏢 حساب إدارة حكومي</option></select>
                         <input type="tel" id="mNewUserPhone" placeholder="📱 رقم الموبايل *" required>
                         <input type="email" id="mNewUserEmail" class="user-form-full" placeholder="📧 البريد الإلكتروني (اختياري)">
                     </div>
@@ -2537,6 +2535,7 @@ body{background:radial-gradient(ellipse at 8% 8%,rgba(32,129,185,.17),transparen
         <label style="color:#8892b0;font-size:14px;margin-top:10px;display:block;">نوع الجهاز / الخدمة:</label>
         <select id="reqDeviceType"></select>
         <input type="text" id="reqClientName" placeholder="اسم العميل">
+        <div id="reqUnitNameWrap" style="display:none;"><label for="reqUnitName" style="color:#8892b0;font-size:14px;margin-top:10px;display:block;">اسم الوحدة / القسم التابع للجهاز</label><input type="text" id="reqUnitName" maxlength="80" placeholder="مثال: وحدة الصيانة"></div>
         <input type="text" id="reqAddress" placeholder="📍 العنوان بالتفصيل (المنطقة - الشارع - الدور)" style="display:none;">
         <textarea id="reqDetails" placeholder="وصف المشكلة أو الطلب"></textarea>
         <select id="reqPriority">
@@ -3374,7 +3373,7 @@ body{background:radial-gradient(ellipse at 8% 8%,rgba(32,129,185,.17),transparen
             '#': i + 1,
             'المعرف': r.id,
             'اسم الحساب (عامل الطلب)': creatorOf(r),
-            'العميل': r.clientName,
+            'العميل / الوحدة': requestAccountDisplayName(r),
             'الموبايل': r.clientPhone || '',
             'الإيميل': r.clientEmail || '',
             'السيريال': r.serialNumber,
@@ -3410,7 +3409,7 @@ body{background:radial-gradient(ellipse at 8% 8%,rgba(32,129,185,.17),transparen
         let y = 120;
         requests.slice(0, 20).forEach((r, i) => {
             if (y > 750) { doc.addPage(); y = 50; }
-            doc.text(`${i+1}. ${r.clientName} - ${r.serialNumber} (${r.progress}%)`, 40, y);
+            doc.text(`${i+1}. ${requestAccountDisplayName(r)} - ${r.serialNumber} (${r.progress}%)`, 40, y);
             y += 20;
         });
         if (requests.length > 20) {
@@ -3428,9 +3427,9 @@ body{background:radial-gradient(ellipse at 8% 8%,rgba(32,129,185,.17),transparen
             showToast('⚠️ لا توجد بيانات للتصدير', 'warning');
             return;
         }
-        let csv = '#,المعرف,اسم الحساب,العميل,الموبايل,الإيميل,السيريال,النوع,الأولوية,النسبة,الحالة,التاريخ\n';
+        let csv = '#,المعرف,اسم الحساب,العميل / الوحدة,الموبايل,الإيميل,السيريال,النوع,الأولوية,النسبة,الحالة,التاريخ\n';
         requests.forEach((r, i) => {
-            csv += `${i+1},${r.id},"${creatorOf(r)}",${r.clientName},"${r.clientPhone || ''}","${r.clientEmail || ''}",${r.serialNumber},"${r.deviceType || ''}",${r.priority || 'عادي'},${r.progress}%,${r.status},${r.createdAt}\n`;
+            csv += `${i+1},${r.id},"${creatorOf(r)}",${requestAccountDisplayName(r)},"${r.clientPhone || ''}","${r.clientEmail || ''}",${r.serialNumber},"${r.deviceType || ''}",${r.priority || 'عادي'},${r.progress}%,${r.status},${r.createdAt}\n`;
         });
         const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
         const url = URL.createObjectURL(blob);
@@ -3981,6 +3980,10 @@ body{background:radial-gradient(ellipse at 8% 8%,rgba(32,129,185,.17),transparen
                 const nm = document.getElementById('reqClientName');
                 nm.value = currentUser.username; nm.readOnly = true;
             }
+            const unitWrap = document.getElementById('reqUnitNameWrap');
+            if (unitWrap) unitWrap.style.display = currentUser && currentUser.isDept ? '' : 'none';
+            const unitInput = document.getElementById('reqUnitName');
+            if (unitInput) unitInput.value = '';
             uploadedImages = [];
             document.getElementById('reqImagesPreview').innerHTML = '';
             if (!document.getElementById('reqCategory').options.length) resetRequestForm();
@@ -4201,32 +4204,14 @@ body{background:radial-gradient(ellipse at 8% 8%,rgba(32,129,185,.17),transparen
     // ===== الإدارات والوحدات (حساب إدارة بيشوف أجهزة كل الوحدات التابعة له) =====
     function refreshNewUserDeptUI() {
         const role = document.getElementById('mNewUserRole').value;
-        const ctEl = document.getElementById('mNewUserClientType'), pEl = document.getElementById('mNewUserParent');
-        if (!ctEl || !pEl) return;
+        const ctEl = document.getElementById('mNewUserClientType');
+        if (!ctEl) return;
         ctEl.style.display = role === 'client' ? '' : 'none';
-        pEl.style.display = role === 'client' && ctEl.value === 'gov' ? '' : 'none';
-        const unitEl = document.getElementById('mNewUserUnitName');
-        if (unitEl) unitEl.style.display = role === 'client' && ctEl.value === 'dept' ? '' : 'none';
-        const keep = pEl.value;
-        pEl.innerHTML = '<option value="">🏢 بدون إدارة</option>' + getData().users.filter(u => u.role === 'client' && u.isDept)
-            .map(d => `<option value="${esc(d.username)}">🏢 ${esc(departmentDisplayName(d))}</option>`).join('');
-        pEl.value = keep;
     }
-    function departmentDisplayName(u) {
-        const unit = String(u && u.unitName || '').trim();
-        return unit ? `${u.username} (${unit})` : (u ? u.username : '');
-    }
-    function displayAccountName(username) {
-        const account = getData().users.find(u => u.username === username && u.isDept);
-        return account ? departmentDisplayName(account) : (username || '');
-    }
-    function saveDepartmentUnit(username, value) {
-        const data = getData(), u = data.users.find(x => x.username === username);
-        if (!u || !u.isDept || u.role !== 'client') return;
-        u.unitName = String(value || '').trim().slice(0, 80);
-        saveData(data);
-        showToast('✅ تم حفظ الوحدة / القسم التابع', 'success');
-        loadManagerUsersList();
+    const departmentDisplayName = u => u ? u.username : '';
+    function requestAccountDisplayName(r) {
+        const unit = String(r && r.unitName || '').trim();
+        return unit ? `${r.clientName} (${unit})` : (r ? r.clientName : '');
     }
     function toggleDept(username) {
         const data = getData(), u = data.users.find(x => x.username === username);
@@ -4248,14 +4233,11 @@ body{background:radial-gradient(ellipse at 8% 8%,rgba(32,129,185,.17),transparen
         if (u.role !== 'client' || u.clientType !== 'gov') return '';
         const st = 'margin-top:6px;font-size:10px;padding:3px 10px;';
         if (u.isDept) {
-            const n = data.users.filter(x => x.parent === u.username).length;
-            return `<div style="font-size:11px;color:#0ea5e9;margin-top:4px;">🏢 حساب إدارة — ${n} وحدة تابعة</div>
+            const n = data.requests.filter(x => x.clientName === u.username).length;
+            return `<div style="font-size:11px;color:#0ea5e9;margin-top:4px;">🏢 حساب إدارة — ${n} جهاز مسجل</div>
                 <button class="btn btn-outline btn-sm" onclick="toggleDept('${u.username}')" style="${st}">↩️ إلغاء حساب الإدارة</button>`;
         }
-        const opts = data.users.filter(x => x.role === 'client' && x.isDept)
-            .map(d => `<option value="${esc(d.username)}" ${u.parent === d.username ? 'selected' : ''}>🏢 ${esc(departmentDisplayName(d))}</option>`).join('');
-        return `<select onchange="setClientParent('${u.username}', this.value)" style="margin-top:6px;font-size:11px;padding:3px 6px;max-width:100%;"><option value="">🏢 بدون إدارة</option>${opts}</select>`
-            + (u.parent ? '' : `<button class="btn btn-outline btn-sm" onclick="toggleDept('${u.username}')" style="${st}">🏢 تحويل لحساب إدارة</button>`);
+        return `<button class="btn btn-outline btn-sm" onclick="toggleDept('${u.username}')" style="${st}">🏢 تحويل لحساب إدارة</button>`;
     }
     function loadManagerUsersList() {
         const data = getData();
@@ -4279,7 +4261,6 @@ body{background:radial-gradient(ellipse at 8% 8%,rgba(32,129,185,.17),transparen
                     ${u.role === 'client' ? `<div style="font-size:11px;color:#ff5b5b;font-weight:700;margin-top:4px;">🎁 ${Number(u.loyaltyPoints) || 0} نقطة</div>` : ''}
                     ${u.role === 'client' ? `<button class="btn btn-outline btn-sm" onclick="toggleClientGov('${u.username}')" style="margin-top:6px;font-size:10px;padding:3px 10px;">${u.clientType === 'gov' ? '↩️ تحويل لعادي' : '🏛️ تحويل لحكومي'}</button>` : ''}
                     ${deptControlsHtml(u, data)}
-                    ${u.role === 'client' && u.isDept ? `<div style="margin-top:8px;"><label for="unitName_${esc(u.username)}" style="display:block;font-size:11px;margin-bottom:4px;">الوحدة / القسم التابع</label><input id="unitName_${esc(u.username)}" type="text" maxlength="80" value="${esc(u.unitName || '')}" placeholder="مثال: وحدة الصيانة" style="width:100%;"><button class="btn btn-outline btn-sm" onclick="saveDepartmentUnit('${esc(u.username)}', document.getElementById('unitName_${esc(u.username)}').value)" style="margin-top:5px;">💾 حفظ الاسم</button></div>` : ''}
                     <button class="btn btn-outline btn-sm" onclick="changeUserPassword('${u.username}')" style="margin-top:6px;font-size:10px;padding:3px 10px;">🔑 كلمة مرور</button>
                     ${u.username !== 'manager' ? `<button class="btn btn-danger btn-sm" onclick="deleteUserV2('${u.username}')" style="margin-top:6px;font-size:10px;padding:3px 10px;">🗑️ حذف</button>` : '<span style="color:#8892b0;font-size:10px;">🔒 أساسي</span>'}
                 </div>
@@ -4356,8 +4337,7 @@ body{background:radial-gradient(ellipse at 8% 8%,rgba(32,129,185,.17),transparen
         const newUser = { username, password, role, phone, email };
         if (clientType) {
             newUser.clientType = 'gov';
-            if (ctSel === 'dept') { newUser.isDept = true; newUser.unitName = document.getElementById('mNewUserUnitName').value.trim().slice(0, 80); }
-            else { const par = document.getElementById('mNewUserParent').value; if (par) newUser.parent = par; }
+            if (ctSel === 'dept') newUser.isDept = true;
         }
         data.users.push(newUser);
         saveData(data);
@@ -4367,7 +4347,6 @@ body{background:radial-gradient(ellipse at 8% 8%,rgba(32,129,185,.17),transparen
         document.getElementById('mNewUserPassword').value = '';
         document.getElementById('mNewUserPhone').value = '';
         document.getElementById('mNewUserEmail').value = '';
-        document.getElementById('mNewUserUnitName').value = '';
         loadManagerUsersList();
         addLog(`أضاف ${currentUser.username} مستخدم جديد: ${username} (${role}${ctSel === 'dept' ? ' - حساب إدارة' : clientType ? ' - حكومي' : ''})`);
     }
@@ -4415,7 +4394,7 @@ body{background:radial-gradient(ellipse at 8% 8%,rgba(32,129,185,.17),transparen
             html += `<tr>
                 <td>${i+1}</td>
                 <td>${r.requestId}</td>
-                <td>${esc(displayAccountName(r.clientName))}</td>
+                <td>${esc(requestAccountDisplayName(r))}</td>
                 <td><span style="color:#f39c12;font-size:16px;">${'★'.repeat(r.rating)}${'☆'.repeat(5-r.rating)}</span> (${r.rating})</td>
                 <td style="font-size:12px;">${r.comment || '-'}</td>
                 <td style="font-size:12px;">${r.timestamp}</td>
@@ -4596,6 +4575,8 @@ body{background:radial-gradient(ellipse at 8% 8%,rgba(32,129,185,.17),transparen
         /* السيريال بيسجله الكاشير وقت الاستلام */
         const serialNumber = isSvc ? 'SVC-' + Date.now().toString(36).toUpperCase().slice(-5) : WPENDING_SN;
         const deviceDetails = [isSvc && addr ? '📍 العنوان: ' + addr : '', desc].filter(Boolean).join('\n');
+        const unitName = currentUser && currentUser.isDept ? document.getElementById('reqUnitName').value.trim().slice(0, 80) : '';
+        if (currentUser && currentUser.isDept && !unitName) { showToast('⚠️ اكتب اسم الوحدة / القسم التابع للجهاز', 'warning'); return; }
 
         const data = getData();
         const clientUser = data.users.find(u => u.username === clientName);
@@ -4603,6 +4584,7 @@ body{background:radial-gradient(ellipse at 8% 8%,rgba(32,129,185,.17),transparen
             id: generateId(),
             serialNumber,
             clientName,
+            ...(unitName ? { unitName } : {}),
             createdBy: currentUser.username,
             clientPhone: clientUser ? clientUser.phone || '' : '',
             clientEmail: clientUser ? clientUser.email || '' : '',
@@ -4626,6 +4608,7 @@ body{background:radial-gradient(ellipse at 8% 8%,rgba(32,129,185,.17),transparen
         showToast(`✅ تم إرسال الطلب بنجاح! المعرف: ${request.id}`, 'success');
         closeModal('requestModal');
         document.getElementById('reqClientName').value = currentUser.username;
+        document.getElementById('reqUnitName').value = '';
         resetRequestForm();
         document.getElementById('reqImagesPreview').innerHTML = '';
         uploadedImages = [];
@@ -4896,7 +4879,7 @@ Wasla
 وصل تسليم جهاز من العميل إلى الكاشير
 ----------------------------------------
 رقم الوصل (معرف الطلب) : ${request.id}
-العميل       : ${request.clientName}
+العميل / الوحدة : ${requestAccountDisplayName(request)}
 📱 الموبايل   : ${request.clientPhone || 'غير مسجل'}
 📧 الإيميل    : ${request.clientEmail || 'غير مسجل'}
 السيريال     : ${request.serialNumber}
@@ -4998,7 +4981,7 @@ ${request.status === 'ready_for_pickup' ? '📌 الجهاز جاهز للاست
                 const priorityText = priorityMap[r.priority] || '🟢 عادي';
                 report += `
 ${i+1}. المعرف: ${r.id}
-   العميل: ${r.clientName}
+   العميل / الوحدة: ${requestAccountDisplayName(r)}
    📱 الموبايل: ${r.clientPhone || 'غير مسجل'}
    📧 الإيميل: ${r.clientEmail || 'غير مسجل'}
    السيريال: ${r.serialNumber}
@@ -5097,7 +5080,7 @@ ${i+1}. المعرف: ${r.id}
             html += `<tr class="priority-${r.priority || 'normal'}${isLate(r) ? ' w-late' : ''}">
                 <td>${index + 1}</td>
                 <td><strong>${esc(creatorOf(r))}</strong><div style="font-size:10px;color:#8892b0;cursor:pointer;" title="رقم الوصل — اضغط للنسخ" onclick="copyRequestId('${esc(r.id)}')">${esc(r.id)}</div></td>
-                <td>${esc(displayAccountName(r.clientName))}</td>
+                <td>${esc(requestAccountDisplayName(r))}</td>
                 <td style="font-size:12px;">${r.clientPhone || '-'}</td>
                 <td style="font-size:12px;">${r.clientEmail || '-'}</td>
                 <td>${r.serialNumber}</td>
@@ -5177,7 +5160,7 @@ ${i+1}. المعرف: ${r.id}
         request.techReceiptNo = '';
         saveData(data);
 
-        const msg = `📤 جهاز جديد للصيانة — معرف الطلب: ${request.id} | العميل: ${request.clientName} | السيريال: ${request.serialNumber} | النوع: ${request.deviceType || 'غير محدد'}` +
+        const msg = `📤 جهاز جديد للصيانة — معرف الطلب: ${request.id} | العميل / الوحدة: ${requestAccountDisplayName(request)} | السيريال: ${request.serialNumber} | النوع: ${request.deviceType || 'غير محدد'}` +
             (request.deviceDetails ? ` | التفاصيل: ${request.deviceDetails}` : '') +
             (note ? ` | ملاحظة: ${note}` : '') +
             ` — من فضلك استلم الجهاز من الكاشير وأكّد الاستلام من لوحتك علشان يوصلني الوصل.`;
@@ -5220,7 +5203,7 @@ ${i+1}. المعرف: ${r.id}
             const action = techActions(r);
             html += `<tr>
                 <td><strong>${esc(creatorOf(r))}</strong><div style="font-size:10px;color:#8892b0;">${esc(r.id)}</div></td>
-                <td>${esc(displayAccountName(r.clientName))}</td>
+                <td>${esc(requestAccountDisplayName(r))}</td>
                 <td>${r.serialNumber}</td>
                 <td>${r.deviceType || '-'}</td>
                 <td style="font-size:12px;max-width:180px;word-break:break-word;">${r.deviceDetails || '-'}</td>
@@ -5285,7 +5268,7 @@ Wasla
 ----------------------------------------
 رقم الوصل    : ${r.techReceiptNo || ('T-' + r.id)}
 معرف الطلب   : ${r.id}
-العميل       : ${r.clientName}
+العميل / الوحدة : ${requestAccountDisplayName(r)}
 السيريال     : ${r.serialNumber}
 نوع الجهاز   : ${r.deviceType || 'غير محدد'}
 تفاصيل الجهاز: ${r.deviceDetails || 'لا يوجد'}
@@ -5409,7 +5392,7 @@ ${o.notice ? `<div class="note">${esc(o.notice)}</div>` : ''}
         const rows = [
             ['رقم الوصل', r.id],
             ['تاريخ ووقت التسجيل', r.createdAt],
-            ['اسم العميل', r.clientName],
+            ['اسم العميل / الوحدة', requestAccountDisplayName(r)],
             ['رقم الموبايل', r.clientPhone],
             ['نوع الجهاز', r.deviceType || 'غير محدد'],
             ['السيريال نمبر', r.serialNumber],
@@ -5435,7 +5418,7 @@ ${o.notice ? `<div class="note">${esc(o.notice)}</div>` : ''}
         const rows = [
             ['رقم الوصل', r.techReceiptNo || ('T-' + r.id)],
             ['معرف الطلب', r.id],
-            ['اسم العميل', r.clientName],
+            ['اسم العميل / الوحدة', requestAccountDisplayName(r)],
             ['نوع الجهاز', r.deviceType || 'غير محدد'],
             ['السيريال نمبر', r.serialNumber],
             ['تفاصيل الجهاز', r.deviceDetails || 'لا يوجد'],
@@ -5527,7 +5510,7 @@ ${o.notice ? `<div class="note">${esc(o.notice)}</div>` : ''}
         return `<div class="ct-card ${r.status === 'ready_for_pickup' ? 'ready' : ''}">
             <div class="ct-head"><div>
                 <h3>${r.category && WCAT[r.category] ? WCAT[r.category].icon + ' ' : ''}${r.deviceType ? esc(r.deviceType) + ' — ' : ''}${esc(r.serialNumber)}</h3>
-                <div class="ct-sub">رقم الوصل: <b style="color:#ccd6f6;cursor:pointer;" onclick="copyRequestId('${esc(r.id)}')" title="اضغط للنسخ">${esc(r.id)} 📋</b>${r.priority ? ' • ' + (prio[r.priority] || prio.normal) : ''}${(!pub && currentUser && r.clientName && r.clientName !== currentUser.username) ? ' • 🏛️ ' + esc(displayAccountName(r.clientName)) : ''}${r.createdAt ? ' • ' + esc(r.createdAt) : ''}</div>
+                <div class="ct-sub">رقم الوصل: <b style="color:#ccd6f6;cursor:pointer;" onclick="copyRequestId('${esc(r.id)}')" title="اضغط للنسخ">${esc(r.id)} 📋</b>${r.priority ? ' • ' + (prio[r.priority] || prio.normal) : ''}${(!pub && currentUser && r.clientName && r.clientName !== currentUser.username) ? ' • 🏛️ ' + esc(requestAccountDisplayName(r)) : ''}${r.unitName && (pub || !currentUser || (currentUser.role === 'client' && r.clientName === currentUser.username)) ? ' • ' + esc(r.unitName) : ''}${r.createdAt ? ' • ' + esc(r.createdAt) : ''}</div>
             </div></div>
             <div class="ct-banner ${bcls}">${btxt}</div>
             ${quote}
@@ -5654,7 +5637,7 @@ ${o.notice ? `<div class="note">${esc(o.notice)}</div>` : ''}
         const body = $id('orderModalBody');
         if (!r || !currentUser) { body.innerHTML = '<div class="empty-state">الطلب غير موجود</div>'; return; }
         const role = currentUser.role, money$ = role === 'cashier' || role === 'manager';
-        let h = `<h2>⚙️ إدارة الطلب</h2><div class="ct-sub" style="margin-bottom:8px;">${esc(r.id)} • ${esc(displayAccountName(r.clientName))} • ${esc(r.deviceType || '-')} • ${esc(r.serialNumber)}</div>`;
+        let h = `<h2>⚙️ إدارة الطلب</h2><div class="ct-sub" style="margin-bottom:8px;">${esc(r.id)} • ${esc(requestAccountDisplayName(r))} • ${esc(r.deviceType || '-')} • ${esc(r.serialNumber)}</div>`;
 
         h += omSec('📅 الموعد المتوقع' + (money$ ? ' والضمان' : ''), `
             <label class="om-l">تاريخ التسليم المتوقع</label><input type="date" id="omEta" value="${esc(r.eta || '')}">
@@ -5779,7 +5762,7 @@ ${o.notice ? `<div class="note">${esc(o.notice)}</div>` : ''}
         const t = waTemplates(r);
         const def = r.status === 'picked_up' ? 'thanks' : r.status === 'ready_for_pickup' ? 'ready' : (r.quote && r.quote.status === 'proposed' ? 'quote' : 'received');
         $id('waTemplate').innerHTML = Object.entries(t).map(([k, v]) => `<option value="${k}" ${k === def ? 'selected' : ''}>${v[0]}</option>`).join('');
-        $id('waInfo').textContent = `${displayAccountName(r.clientName)} — ${r.clientPhone}`;
+        $id('waInfo').textContent = `${requestAccountDisplayName(r)} — ${r.clientPhone}`;
         waSelectChanged();
         openModal('waModal');
     }
@@ -5824,7 +5807,7 @@ ${o.notice ? `<div class="note">${esc(o.notice)}</div>` : ''}
     function renderDeliver() {
         const r = getData().requests.find(x => x.id === dlvId); if (!r) return;
         const rem = remainingOf(r), isMgr = currentUser.role === 'manager';
-        $id('dlvInfo').innerHTML = `<div class="ct-sub" style="margin-bottom:6px;">${esc(displayAccountName(r.clientName))} • ${esc(r.deviceType || '-')} • سيريال ${esc(r.serialNumber)}</div>
+        $id('dlvInfo').innerHTML = `<div class="ct-sub" style="margin-bottom:6px;">${esc(requestAccountDisplayName(r))} • ${esc(r.deviceType || '-')} • سيريال ${esc(r.serialNumber)}</div>
             <div class="ct-banner">🧾 اطلب من العميل <b>الوصل</b> واكتب رقمه (أو امسح الـ QR/الباركود)${isMgr ? ' — المدير يقدر يسيبه فاضي كاستثناء' : ''}.</div>`;
         $id('dlvMoney').innerHTML = rem > 0
             ? `<div class="ct-banner ready">💵 متبقي على العميل: <b>${money(rem)}</b>
@@ -5906,7 +5889,7 @@ ${o.notice ? `<div class="note">${esc(o.notice)}</div>` : ''}
             @page{size:62mm auto;margin:2mm} body{font-family:Tahoma,Arial,sans-serif;width:58mm;margin:0 auto;text-align:center;color:#000}
             h1{font-size:15px;margin:2px 0}.l{font-size:12px;margin:2px 0}.id{font-family:monospace;font-size:13px;letter-spacing:1px;font-weight:bold}
             svg{max-width:100%;height:auto}img.qr{width:26mm;height:26mm}</style></head><body>
-            <h1>Wasla</h1><div class="l"><b>${esc(r.clientName)}</b></div><div class="l">${esc(r.deviceType || '')} — ${esc(r.serialNumber)}</div>
+            <h1>Wasla</h1><div class="l"><b>${esc(requestAccountDisplayName(r))}</b></div><div class="l">${esc(r.deviceType || '')} — ${esc(r.serialNumber)}</div>
             <div class="l">${esc(r.receivedByCashierAt || r.createdAt || '')}</div>
             <div style="margin:6px 0;">${code128Svg(r.id, 46, 2)}</div><div class="id">${esc(r.id)}</div>
             ${qr ? `<div><img class="qr" src="${qr}"></div><div class="l" style="font-size:10px;">امسح لتتبع الجهاز</div>` : ''}
