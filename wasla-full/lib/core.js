@@ -211,7 +211,7 @@ async function rateLimited(key, max, windowSec) {
 
 // ---------------------------------------------------------------- العرض حسب الدور
 const isGovClient = u => u.role === 'client' && u.clientType === 'gov';
-const pubUser = u => ({ username: u.username, role: u.role, clientType: isGovClient(u) ? 'gov' : '', isDept: isGovClient(u) && !!u.isDept, unitName: isGovClient(u) && u.isDept ? str(u.unitName, 80) : '', parent: isGovClient(u) && u.parent ? u.parent : '', phone: u.phone || '', email: u.email || '', mustChange: !!u.mustChange });
+const pubUser = u => ({ username: u.username, role: u.role, clientType: isGovClient(u) ? 'gov' : '', isDept: isGovClient(u) && !!u.isDept, parent: isGovClient(u) && u.parent ? u.parent : '', phone: u.phone || '', email: u.email || '', mustChange: !!u.mustChange });
 // أسماء الحسابات اللي المستخدم يقدر يشوف أجهزتها: نفسه + (لو حساب إدارة) كل الوحدات التابعة له
 const ownedNames = (db, u) => { const s = new Set([u.username]); if (isGovClient(u) && u.isDept) for (const x of db.users) if (isGovClient(x) && x.parent === u.username) s.add(x.username); return s; };
 function viewFor(db, user, ver) {
@@ -233,7 +233,7 @@ function viewFor(db, user, ver) {
     } else {
         const owned = ownedNames(db, user);
         out.users = db.users.filter(u => u.role === 'cashier' || u.role === 'manager' || owned.has(u.username))
-            .map(u => ({ username: u.username, role: u.role, ...(isGovClient(u) ? { clientType: 'gov', isDept: !!u.isDept, unitName: u.isDept ? str(u.unitName, 80) : '', parent: u.parent || '' } : {}), phone: u === user ? u.phone || '' : '', email: u === user ? u.email || '' : '', mustChange: u === user && !!u.mustChange }));
+            .map(u => ({ username: u.username, role: u.role, ...(isGovClient(u) ? { clientType: 'gov', isDept: !!u.isDept, parent: u.parent || '' } : {}), phone: u === user ? u.phone || '' : '', email: u === user ? u.email || '' : '', mustChange: u === user && !!u.mustChange }));
         out.requests = db.requests.filter(r => owned.has(r.clientName)).map(r => {
             const { internalNotes, techHandedBackAt, techHandedBackTs, ...rest } = r;
             if (rest.partsUsed) rest.partsUsed = rest.partsUsed.map(p => ({ name: p.name, qty: p.qty }));
@@ -253,7 +253,7 @@ function viewFor(db, user, ver) {
 const APPEND_ARRAYS = ['history', 'payments', 'internalNotes', 'partsUsed'];
 const TECH_FIELDS = ['progress', 'history', 'status', 'techStatus', 'techReceivedBy', 'techReceivedAt', 'techReceivedTs', 'techReceiptNo', 'acceptedByManagerAt', 'completedAt', 'completedTs', 'techHandedBackAt', 'techHandedBackTs', 'eta', 'quote', 'partsUsed', 'internalNotes', 'diagnosis'];
 const CLIENT_FIELDS = ['status', 'pickedUpAt', 'pickedUpTs', 'pickedUpBy', 'quote'];
-const CLIENT_CREATE = ['id', 'serialNumber', 'priority', 'deviceDetails', 'images', 'createdAt', 'createdAtTs', 'createdTs', 'clientEmail'];
+const CLIENT_CREATE = ['id', 'serialNumber', 'priority', 'deviceDetails', 'unitName', 'images', 'createdAt', 'createdAtTs', 'createdTs', 'clientEmail'];
 const itemKey = x => (x && typeof x === 'object' && x.id) ? 'id:' + x.id : JSON.stringify(x);
 const paidOf = r => (r.payments || []).reduce((a, p) => a + (Number(p.amount) || 0), 0);
 function setField(target, k, v) {
@@ -286,6 +286,7 @@ async function applyOps(db, user, rawOps, rejected, ctx) {
                 for (const k of CLIENT_CREATE) if (patch[k] !== undefined) rec[k] = patch[k];
                 rec.clientName = me; rec.createdBy = me; rec.clientPhone = user.phone || '';
                 rec.serialNumber = str(rec.serialNumber, 100); rec.deviceDetails = str(rec.deviceDetails, 1000);
+                rec.unitName = isGovClient(user) && user.isDept ? str(rec.unitName, 80).trim() : '';
                 rec.images = await extractImages(Array.isArray(rec.images) ? rec.images : []);
                 if (!rec.serialNumber) { rej('طلب بدون سيريال'); continue; }
                 db.requests.push(rec);
@@ -367,9 +368,8 @@ async function applyOps(db, user, rawOps, rejected, ctx) {
             if (!ex) {
                 if (!patch.password || String(patch.password).length < 4) { rej('كلمة مرور قصيرة'); continue; }
                 if (!['client', 'cashier', 'technician', 'manager'].includes(patch.role)) { rej('دور غير صالح'); continue; }
-                db.users.push({ username: str(patch.username, 40), passwordHash: hashPassword(patch.password), role: patch.role, phone: phone || '', email: str(patch.email, 100), mustChange: true, ...(patch.role === 'client' && patch.clientType === 'gov' ? { clientType: 'gov', ...(patch.isDept ? { isDept: true, unitName: str(patch.unitName, 80).trim() } : (findDept(db, patch.parent) ? { parent: patch.parent } : {})) } : {}) });
+                db.users.push({ username: str(patch.username, 40), passwordHash: hashPassword(patch.password), role: patch.role, phone: phone || '', email: str(patch.email, 100), mustChange: true, ...(patch.role === 'client' && patch.clientType === 'gov' ? { clientType: 'gov', ...(patch.isDept ? { isDept: true } : (findDept(db, patch.parent) ? { parent: patch.parent } : {})) } : {}) });
             } else {
-                if (patch.unitName !== undefined && isGovClient(ex) && ex.isDept) ex.unitName = str(patch.unitName, 80).trim();
                 if (phone !== undefined) ex.phone = phone;
                 if (patch.email !== undefined) ex.email = str(patch.email, 100);
                 if (patch.clientType !== undefined && ex.role === 'client') ex.clientType = patch.clientType === 'gov' ? 'gov' : '';
@@ -520,11 +520,11 @@ const routes = {
         if (await rateLimited(`track:${ipOf(req)}`, 40, 600)) return send(res, 429, { error: 'محاولات كتير، جرب بعد شوية' });
         const { db } = await getDb();
         const id = str(req.query.id, 60).trim(), phone = normPhone(req.query.phone);
-        const brief = r => ({ id: r.id, deviceType: r.deviceType || '', status: r.status, progress: r.progress || 0, createdAt: r.createdAt || '' });
+        const brief = r => ({ id: r.id, deviceType: r.deviceType || '', unitName: r.unitName || '', status: r.status, progress: r.progress || 0, createdAt: r.createdAt || '' });
         if (!id && phone.length >= 8) return send(res, 200, { list: db.requests.filter(r => normPhone(r.clientPhone) === phone).slice(-20).reverse().map(brief) });
         const r = db.requests.find(x => x.id === id);
         if (!r) return send(res, 404, { error: '❌ مفيش طلب بالرقم ده' });
-        const t = { id: r.id, deviceType: r.deviceType || '', serialNumber: '***' + String(r.serialNumber || '').slice(-3), status: r.status, progress: r.progress || 0, priority: r.priority,
+        const t = { id: r.id, deviceType: r.deviceType || '', unitName: r.unitName || '', serialNumber: '***' + String(r.serialNumber || '').slice(-3), status: r.status, progress: r.progress || 0, priority: r.priority,
             createdAt: r.createdAt, receivedByCashierAt: r.receivedByCashierAt, techStatus: r.techStatus, techReceivedAt: r.techReceivedAt, completedAt: r.completedAt, pickedUpAt: r.pickedUpAt, eta: r.eta || '' };
         const wd = r.warrantyDays !== undefined && r.warrantyDays !== '' ? Number(r.warrantyDays) : Number(db.settings.warrantyDays || 0);
         t.warrantyDays = wd || 0; t.warrantyUntilTs = r.pickedUpTs && wd ? r.pickedUpTs + wd * 864e5 : 0;
