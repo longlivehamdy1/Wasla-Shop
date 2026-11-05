@@ -2351,6 +2351,7 @@ body{background:radial-gradient(ellipse at 8% 8%,rgba(32,129,185,.17),transparen
                             <option value="manager">👨‍💼 مدير</option>
                         </select>
                         <select id="mNewUserClientType" title="نوع العميل" onchange="refreshNewUserDeptUI()"><option value="">👤 عميل عادي</option><option value="gov">🏛️ عميل حكومي (وحدة)</option><option value="dept">🏢 حساب إدارة (يشوف أجهزة كل وحداته)</option></select>
+                        <input type="text" id="mNewUserUnitName" class="user-form-full" placeholder="الوحدة / القسم التابع" style="display:none">
                         <select id="mNewUserParent" title="الإدارة التابعة لها الوحدة" style="display:none"></select>
                         <input type="tel" id="mNewUserPhone" placeholder="📱 رقم الموبايل *" required>
                         <input type="email" id="mNewUserEmail" class="user-form-full" placeholder="📧 البريد الإلكتروني (اختياري)">
@@ -3545,7 +3546,7 @@ body{background:radial-gradient(ellipse at 8% 8%,rgba(32,129,185,.17),transparen
             const select = document.getElementById('chatUserSelect');
             const data = getData();
             const prev = select.value;
-            const optLabel = u => `<option value="${u.username}">${u.username} ${u.phone ? '📱 '+u.phone : ''}</option>`;
+            const optLabel = u => `<option value="${esc(u.username)}">${esc(u.isDept ? departmentDisplayName(u) : u.username)} ${u.phone ? '📱 '+esc(u.phone) : ''}</option>`;
             let opts = '<option value="">-- اختر المحادث --</option>';
             if (role === 'technician') {
                 data.users.filter(u => u.role === 'cashier').forEach(u => { opts += optLabel(u); });
@@ -3758,7 +3759,7 @@ body{background:radial-gradient(ellipse at 8% 8%,rgba(32,129,185,.17),transparen
         if (contactInfo) contactInfo = `<div style="font-size:12px;color:#8892b0;">${contactInfo}</div>`;
 
         document.getElementById('userDisplay').innerHTML = `
-            👋 ${user.username} <span class="badge ${badgeClass[user.role]}">${roleNames[user.role]}</span>
+            👋 ${esc(user.isDept ? departmentDisplayName(user) : user.username)} <span class="badge ${badgeClass[user.role]}">${roleNames[user.role]}</span>
             ${contactInfo}
         `;
 
@@ -4204,10 +4205,28 @@ body{background:radial-gradient(ellipse at 8% 8%,rgba(32,129,185,.17),transparen
         if (!ctEl || !pEl) return;
         ctEl.style.display = role === 'client' ? '' : 'none';
         pEl.style.display = role === 'client' && ctEl.value === 'gov' ? '' : 'none';
+        const unitEl = document.getElementById('mNewUserUnitName');
+        if (unitEl) unitEl.style.display = role === 'client' && ctEl.value === 'dept' ? '' : 'none';
         const keep = pEl.value;
         pEl.innerHTML = '<option value="">🏢 بدون إدارة</option>' + getData().users.filter(u => u.role === 'client' && u.isDept)
-            .map(d => `<option value="${esc(d.username)}">🏢 ${esc(d.username)}</option>`).join('');
+            .map(d => `<option value="${esc(d.username)}">🏢 ${esc(departmentDisplayName(d))}</option>`).join('');
         pEl.value = keep;
+    }
+    function departmentDisplayName(u) {
+        const unit = String(u && u.unitName || '').trim();
+        return unit ? `${u.username} (${unit})` : (u ? u.username : '');
+    }
+    function displayAccountName(username) {
+        const account = getData().users.find(u => u.username === username && u.isDept);
+        return account ? departmentDisplayName(account) : (username || '');
+    }
+    function saveDepartmentUnit(username, value) {
+        const data = getData(), u = data.users.find(x => x.username === username);
+        if (!u || !u.isDept || u.role !== 'client') return;
+        u.unitName = String(value || '').trim().slice(0, 80);
+        saveData(data);
+        showToast('✅ تم حفظ الوحدة / القسم التابع', 'success');
+        loadManagerUsersList();
     }
     function toggleDept(username) {
         const data = getData(), u = data.users.find(x => x.username === username);
@@ -4234,7 +4253,7 @@ body{background:radial-gradient(ellipse at 8% 8%,rgba(32,129,185,.17),transparen
                 <button class="btn btn-outline btn-sm" onclick="toggleDept('${u.username}')" style="${st}">↩️ إلغاء حساب الإدارة</button>`;
         }
         const opts = data.users.filter(x => x.role === 'client' && x.isDept)
-            .map(d => `<option value="${esc(d.username)}" ${u.parent === d.username ? 'selected' : ''}>🏢 ${esc(d.username)}</option>`).join('');
+            .map(d => `<option value="${esc(d.username)}" ${u.parent === d.username ? 'selected' : ''}>🏢 ${esc(departmentDisplayName(d))}</option>`).join('');
         return `<select onchange="setClientParent('${u.username}', this.value)" style="margin-top:6px;font-size:11px;padding:3px 6px;max-width:100%;"><option value="">🏢 بدون إدارة</option>${opts}</select>`
             + (u.parent ? '' : `<button class="btn btn-outline btn-sm" onclick="toggleDept('${u.username}')" style="${st}">🏢 تحويل لحساب إدارة</button>`);
     }
@@ -4254,12 +4273,13 @@ body{background:radial-gradient(ellipse at 8% 8%,rgba(32,129,185,.17),transparen
             if (u.email) contact += `📧 ${u.email}`;
             html += `
                 <div class="user-card">
-                    <strong>${u.username}</strong>
+                    <strong>${esc(u.isDept ? departmentDisplayName(u) : u.username)}</strong>
                     <div><span class="role-tag" style="background:${roleColors[u.role]};color:#fff;padding:2px 10px;border-radius:10px;font-size:10px;">${roleNames[u.role] || u.role}</span>${u.role === 'client' && u.clientType === 'gov' ? ' <span class="role-tag" style="background:#0ea5e9;color:#fff;padding:2px 10px;border-radius:10px;font-size:10px;">🏛️ حكومي</span>' : ''}${u.isDept ? ' <span class="role-tag" style="background:#0369a1;color:#fff;padding:2px 10px;border-radius:10px;font-size:10px;">🏢 إدارة</span>' : ''}${u.parent ? ` <span class="role-tag" style="background:#475569;color:#fff;padding:2px 10px;border-radius:10px;font-size:10px;">↳ ${esc(u.parent)}</span>` : ''}</div>
                     ${contact ? `<div class="contact-details">${contact}</div>` : ''}
                     ${u.role === 'client' ? `<div style="font-size:11px;color:#ff5b5b;font-weight:700;margin-top:4px;">🎁 ${Number(u.loyaltyPoints) || 0} نقطة</div>` : ''}
                     ${u.role === 'client' ? `<button class="btn btn-outline btn-sm" onclick="toggleClientGov('${u.username}')" style="margin-top:6px;font-size:10px;padding:3px 10px;">${u.clientType === 'gov' ? '↩️ تحويل لعادي' : '🏛️ تحويل لحكومي'}</button>` : ''}
                     ${deptControlsHtml(u, data)}
+                    ${u.role === 'client' && u.isDept ? `<div style="margin-top:8px;"><label for="unitName_${esc(u.username)}" style="display:block;font-size:11px;margin-bottom:4px;">الوحدة / القسم التابع</label><input id="unitName_${esc(u.username)}" type="text" maxlength="80" value="${esc(u.unitName || '')}" placeholder="مثال: وحدة الصيانة" style="width:100%;"><button class="btn btn-outline btn-sm" onclick="saveDepartmentUnit('${esc(u.username)}', document.getElementById('unitName_${esc(u.username)}').value)" style="margin-top:5px;">💾 حفظ الاسم</button></div>` : ''}
                     <button class="btn btn-outline btn-sm" onclick="changeUserPassword('${u.username}')" style="margin-top:6px;font-size:10px;padding:3px 10px;">🔑 كلمة مرور</button>
                     ${u.username !== 'manager' ? `<button class="btn btn-danger btn-sm" onclick="deleteUserV2('${u.username}')" style="margin-top:6px;font-size:10px;padding:3px 10px;">🗑️ حذف</button>` : '<span style="color:#8892b0;font-size:10px;">🔒 أساسي</span>'}
                 </div>
@@ -4336,7 +4356,7 @@ body{background:radial-gradient(ellipse at 8% 8%,rgba(32,129,185,.17),transparen
         const newUser = { username, password, role, phone, email };
         if (clientType) {
             newUser.clientType = 'gov';
-            if (ctSel === 'dept') newUser.isDept = true;
+            if (ctSel === 'dept') { newUser.isDept = true; newUser.unitName = document.getElementById('mNewUserUnitName').value.trim().slice(0, 80); }
             else { const par = document.getElementById('mNewUserParent').value; if (par) newUser.parent = par; }
         }
         data.users.push(newUser);
@@ -4347,6 +4367,7 @@ body{background:radial-gradient(ellipse at 8% 8%,rgba(32,129,185,.17),transparen
         document.getElementById('mNewUserPassword').value = '';
         document.getElementById('mNewUserPhone').value = '';
         document.getElementById('mNewUserEmail').value = '';
+        document.getElementById('mNewUserUnitName').value = '';
         loadManagerUsersList();
         addLog(`أضاف ${currentUser.username} مستخدم جديد: ${username} (${role}${ctSel === 'dept' ? ' - حساب إدارة' : clientType ? ' - حكومي' : ''})`);
     }
@@ -4394,7 +4415,7 @@ body{background:radial-gradient(ellipse at 8% 8%,rgba(32,129,185,.17),transparen
             html += `<tr>
                 <td>${i+1}</td>
                 <td>${r.requestId}</td>
-                <td>${r.clientName}</td>
+                <td>${esc(displayAccountName(r.clientName))}</td>
                 <td><span style="color:#f39c12;font-size:16px;">${'★'.repeat(r.rating)}${'☆'.repeat(5-r.rating)}</span> (${r.rating})</td>
                 <td style="font-size:12px;">${r.comment || '-'}</td>
                 <td style="font-size:12px;">${r.timestamp}</td>
@@ -4641,7 +4662,7 @@ body{background:radial-gradient(ellipse at 8% 8%,rgba(32,129,185,.17),transparen
         renderClientLoyalty();
         const data = getData();
         const userRequests = clientRequestsList();
-        const unitFilter = currentUser.isDept ? `<select id="clientUnitFilter" onchange="clientUnitSel=this.value;renderClientSearchResults()"><option value="">🏢 كل الوحدات</option><option value="${esc(currentUser.username)}" ${clientUnitSel === currentUser.username ? 'selected' : ''}>📌 الإدارة نفسها</option>${[...clientOwnedNames()].filter(n => n !== currentUser.username).map(n => `<option value="${esc(n)}" ${clientUnitSel === n ? 'selected' : ''}>🏛️ ${esc(n)}</option>`).join('')}</select>` : '';
+        const unitFilter = currentUser.isDept ? `<select id="clientUnitFilter" onchange="clientUnitSel=this.value;renderClientSearchResults()"><option value="">🏢 كل الوحدات</option><option value="${esc(currentUser.username)}" ${clientUnitSel === currentUser.username ? 'selected' : ''}>📌 ${esc(departmentDisplayName(currentUser))}</option>${[...clientOwnedNames()].filter(n => n !== currentUser.username).map(n => { const u = getData().users.find(x => x.username === n); return `<option value="${esc(n)}" ${clientUnitSel === n ? 'selected' : ''}>🏛️ ${esc(u ? departmentDisplayName(u) : n)}</option>`; }).join('')}</select>` : '';
         const container = document.getElementById('clientRequestsContainer');
         container.innerHTML = `
             <div class="search-box">
@@ -5076,7 +5097,7 @@ ${i+1}. المعرف: ${r.id}
             html += `<tr class="priority-${r.priority || 'normal'}${isLate(r) ? ' w-late' : ''}">
                 <td>${index + 1}</td>
                 <td><strong>${esc(creatorOf(r))}</strong><div style="font-size:10px;color:#8892b0;cursor:pointer;" title="رقم الوصل — اضغط للنسخ" onclick="copyRequestId('${esc(r.id)}')">${esc(r.id)}</div></td>
-                <td>${r.clientName}</td>
+                <td>${esc(displayAccountName(r.clientName))}</td>
                 <td style="font-size:12px;">${r.clientPhone || '-'}</td>
                 <td style="font-size:12px;">${r.clientEmail || '-'}</td>
                 <td>${r.serialNumber}</td>
@@ -5199,7 +5220,7 @@ ${i+1}. المعرف: ${r.id}
             const action = techActions(r);
             html += `<tr>
                 <td><strong>${esc(creatorOf(r))}</strong><div style="font-size:10px;color:#8892b0;">${esc(r.id)}</div></td>
-                <td>${r.clientName}</td>
+                <td>${esc(displayAccountName(r.clientName))}</td>
                 <td>${r.serialNumber}</td>
                 <td>${r.deviceType || '-'}</td>
                 <td style="font-size:12px;max-width:180px;word-break:break-word;">${r.deviceDetails || '-'}</td>
@@ -5506,7 +5527,7 @@ ${o.notice ? `<div class="note">${esc(o.notice)}</div>` : ''}
         return `<div class="ct-card ${r.status === 'ready_for_pickup' ? 'ready' : ''}">
             <div class="ct-head"><div>
                 <h3>${r.category && WCAT[r.category] ? WCAT[r.category].icon + ' ' : ''}${r.deviceType ? esc(r.deviceType) + ' — ' : ''}${esc(r.serialNumber)}</h3>
-                <div class="ct-sub">رقم الوصل: <b style="color:#ccd6f6;cursor:pointer;" onclick="copyRequestId('${esc(r.id)}')" title="اضغط للنسخ">${esc(r.id)} 📋</b>${r.priority ? ' • ' + (prio[r.priority] || prio.normal) : ''}${(!pub && currentUser && r.clientName && r.clientName !== currentUser.username) ? ' • 🏛️ ' + esc(r.clientName) : ''}${r.createdAt ? ' • ' + esc(r.createdAt) : ''}</div>
+                <div class="ct-sub">رقم الوصل: <b style="color:#ccd6f6;cursor:pointer;" onclick="copyRequestId('${esc(r.id)}')" title="اضغط للنسخ">${esc(r.id)} 📋</b>${r.priority ? ' • ' + (prio[r.priority] || prio.normal) : ''}${(!pub && currentUser && r.clientName && r.clientName !== currentUser.username) ? ' • 🏛️ ' + esc(displayAccountName(r.clientName)) : ''}${r.createdAt ? ' • ' + esc(r.createdAt) : ''}</div>
             </div></div>
             <div class="ct-banner ${bcls}">${btxt}</div>
             ${quote}
@@ -5633,7 +5654,7 @@ ${o.notice ? `<div class="note">${esc(o.notice)}</div>` : ''}
         const body = $id('orderModalBody');
         if (!r || !currentUser) { body.innerHTML = '<div class="empty-state">الطلب غير موجود</div>'; return; }
         const role = currentUser.role, money$ = role === 'cashier' || role === 'manager';
-        let h = `<h2>⚙️ إدارة الطلب</h2><div class="ct-sub" style="margin-bottom:8px;">${esc(r.id)} • ${esc(r.clientName)} • ${esc(r.deviceType || '-')} • ${esc(r.serialNumber)}</div>`;
+        let h = `<h2>⚙️ إدارة الطلب</h2><div class="ct-sub" style="margin-bottom:8px;">${esc(r.id)} • ${esc(displayAccountName(r.clientName))} • ${esc(r.deviceType || '-')} • ${esc(r.serialNumber)}</div>`;
 
         h += omSec('📅 الموعد المتوقع' + (money$ ? ' والضمان' : ''), `
             <label class="om-l">تاريخ التسليم المتوقع</label><input type="date" id="omEta" value="${esc(r.eta || '')}">
@@ -5758,7 +5779,7 @@ ${o.notice ? `<div class="note">${esc(o.notice)}</div>` : ''}
         const t = waTemplates(r);
         const def = r.status === 'picked_up' ? 'thanks' : r.status === 'ready_for_pickup' ? 'ready' : (r.quote && r.quote.status === 'proposed' ? 'quote' : 'received');
         $id('waTemplate').innerHTML = Object.entries(t).map(([k, v]) => `<option value="${k}" ${k === def ? 'selected' : ''}>${v[0]}</option>`).join('');
-        $id('waInfo').textContent = `${r.clientName} — ${r.clientPhone}`;
+        $id('waInfo').textContent = `${displayAccountName(r.clientName)} — ${r.clientPhone}`;
         waSelectChanged();
         openModal('waModal');
     }
@@ -5803,7 +5824,7 @@ ${o.notice ? `<div class="note">${esc(o.notice)}</div>` : ''}
     function renderDeliver() {
         const r = getData().requests.find(x => x.id === dlvId); if (!r) return;
         const rem = remainingOf(r), isMgr = currentUser.role === 'manager';
-        $id('dlvInfo').innerHTML = `<div class="ct-sub" style="margin-bottom:6px;">${esc(r.clientName)} • ${esc(r.deviceType || '-')} • سيريال ${esc(r.serialNumber)}</div>
+        $id('dlvInfo').innerHTML = `<div class="ct-sub" style="margin-bottom:6px;">${esc(displayAccountName(r.clientName))} • ${esc(r.deviceType || '-')} • سيريال ${esc(r.serialNumber)}</div>
             <div class="ct-banner">🧾 اطلب من العميل <b>الوصل</b> واكتب رقمه (أو امسح الـ QR/الباركود)${isMgr ? ' — المدير يقدر يسيبه فاضي كاستثناء' : ''}.</div>`;
         $id('dlvMoney').innerHTML = rem > 0
             ? `<div class="ct-banner ready">💵 متبقي على العميل: <b>${money(rem)}</b>
