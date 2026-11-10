@@ -1963,7 +1963,7 @@ html body.login-mode .lg-logo img { box-shadow:none; }
 
 <style id="wasla-professional-ui-polish">
 /* Wasla UI polish: intentionally preserves existing brand colors, layout logic and features */
-:root { color-scheme: dark; }
+:root { color-scheme: dark; scroll-behavior: smooth; }
 html { scroll-padding-top: 84px; }
 body { -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
 button, input, select, textarea { font: inherit; }
@@ -5387,30 +5387,80 @@ ${o.notice ? `<div class="note">${esc(o.notice)}</div>` : ''}
     }
     const STATUS_AR = { pending: 'قيد الانتظار', cashier_received: 'استلمه الكاشير', manager_accepted: 'في المخزن / مع الفني', ready_for_pickup: 'جاهز للاستلام', picked_up: 'تم التسليم للعميل' };
     const PRIO_AR = { urgent: 'عاجل', medium: 'متوسط', normal: 'عادي' };
-    // وصل استلام الجهاز من العميل (يطبعه الكاشير)
+    // وصل استلام الجهاز من العميل (يطبعه الكاشير) — نموذج "إيصال استلام أجهزة للصيانة" الرسمي
     function printClientReceipt(r) {
-        const rows = [
-            ['رقم الوصل', r.id],
-            ['تاريخ ووقت التسجيل', r.createdAt],
-            ['اسم العميل / الوحدة', requestAccountDisplayName(r)],
-            ['رقم الموبايل', r.clientPhone],
-            ['نوع الجهاز', r.deviceType || 'غير محدد'],
-            ['السيريال نمبر', r.serialNumber],
-            ['تفاصيل / ملاحظات الجهاز', r.deviceDetails || 'لا يوجد'],
-            ['الأولوية', PRIO_AR[r.priority] || 'عادي'],
-            ['استلمه الكاشير بتاريخ', r.receivedByCashierAt || 'لم يُستلم بعد'],
-            ['حالة الطلب', (STATUS_AR[r.status] || r.status) + ' — ' + (Number(r.progress) || 0) + '%'],
-            r.eta ? ['الموعد المتوقع للتسليم', r.eta] : null,
-            Number(r.price) > 0 ? ['التكلفة', money(r.price)] : null,
-            Number(r.price) > 0 ? ['المدفوع', money(paidOf(r))] : null,
-            Number(r.price) > 0 ? ['المتبقي', money(remainingOf(r))] : null,
-            warrantyDaysOf(r) > 0 ? ['الضمان', warrantyDaysOf(r) + ' يوم من تاريخ التسليم'] : null
-        ];
-        return letterheadPrint({
-            title: 'وصل استلام جهاز', subtitle: 'من العميل إلى الكاشير', rows,
-            notice: 'تنبيه هام: يجب إحضار هذا الوصل عند استلام الجهاز، ولن يتم تسليم الجهاز بدون الوصل.',
-            signs: ['توقيع العميل', 'توقيع الكاشير / الختم'], qr: qrDataUrl(trackUrl(r.id), 120)
-        });
+        const ar = v => String(v == null ? '' : v).replace(/\d/g, d => '٠١٢٣٤٥٦٧٨٩'[d]);
+        const d = new Date(r.receivedTs || Date.now());
+        const dd = ar(String(d.getDate()).padStart(2, '0')), mm = ar(String(d.getMonth() + 1).padStart(2, '0')), yy = ar(d.getFullYear());
+        const rep = currentUser ? currentUser.username : '';
+        const type = r.deviceType || '';
+        const sn = wIsPlaceholderSN(r.serialNumber) ? '' : r.serialNumber;
+        const phone = r.clientPhone || '';
+        const money_ = Number(r.price) > 0
+            ? `<div class="fin">التكلفة: <b>${esc(money(r.price))}</b> &nbsp;|&nbsp; المدفوع: <b>${esc(money(paidOf(r)))}</b> &nbsp;|&nbsp; المتبقي: <b>${esc(money(remainingOf(r)))}</b>${warrantyDaysOf(r) > 0 ? ' &nbsp;|&nbsp; الضمان: <b>' + esc(ar(warrantyDaysOf(r))) + ' يوم من تاريخ التسليم</b>' : ''}</div>` : '';
+        const qr = qrDataUrl(trackUrl(r.id), 120);
+        // سطر بيانات: لو القيمة فاضية بيطلع سطر منقّط للكتابة باليد
+        const row = (label, val, extraLines) => `<div class="row"><span class="lbl">${label}</span><span class="val">${esc(val || '')}</span></div>` + '<div class="ln"></div>'.repeat(extraLines || 0);
+        const html = `<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><title>إيصال استلام أجهزة للصيانة — ${esc(r.id)}</title><style>
+@page{size:A4;margin:0}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;background:#fff}
+body{font-family:Cairo,Tahoma,Arial,sans-serif;color:#000;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.sheet{position:relative;width:210mm;height:296.5mm;overflow:hidden}
+.b1{position:absolute;inset:8mm;border:1.1mm solid #000}
+.b2{position:absolute;inset:10.2mm;border:.35mm solid #000}
+.logo{position:absolute;top:14mm;left:14mm;width:42mm}
+.wm{position:absolute;left:50%;top:46%;width:175mm;transform:translate(-50%,-50%) rotate(-30deg);opacity:.16;mix-blend-mode:multiply}
+.meta{position:absolute;top:14mm;right:15mm;width:34mm;text-align:center;font-size:7.5pt;line-height:1.35}
+.meta img{width:22mm;height:22mm;display:block;margin:0 auto 1mm}
+.meta b{display:block;font-size:8.5pt;word-break:break-all}
+.content{position:absolute;top:40mm;left:16mm;right:16mm}
+h1{margin:0 0 6mm;text-align:center;font-size:19pt;font-weight:800;text-decoration:underline;text-underline-offset:1.6mm}
+.row{display:flex;align-items:flex-end;gap:2mm;margin-top:4mm;font-size:14.5pt;font-weight:700;line-height:1.45}
+.lbl{white-space:nowrap}
+.val{flex:1;border-bottom:.4mm dotted #000;min-height:8mm;padding:0 2mm;font-weight:600;font-size:13pt;white-space:pre-wrap;word-break:break-word}
+.ln{border-bottom:.4mm dotted #000;height:8mm;margin-top:0}
+.row.date{margin-top:0}
+.row.date .val{flex:0 0 auto;border:0;min-height:0;padding:0 1mm;letter-spacing:.5mm}
+.row.date .sl{padding:0 3mm}
+.fin{margin-top:5mm;font-size:11.5pt;border:.3mm solid #000;padding:2mm 3mm;background:rgba(255,255,255,.55)}
+.signs{display:flex;justify-content:space-between;gap:14mm;margin-top:8mm;font-size:14.5pt;font-weight:700}
+.sg{flex:1;text-align:right}
+.sg .sline{border-bottom:.4mm solid #000;height:10mm}
+.phone{width:52%;margin-top:5mm;font-size:14.5pt;font-weight:700}
+.phone .sline{border-bottom:.4mm solid #000;min-height:9mm;padding:0 2mm;font-weight:600;font-size:13pt}
+.foot{position:absolute;left:16mm;right:16mm;bottom:13mm}
+.fbox{border:.4mm solid #444;border-radius:3mm;background:linear-gradient(#eee,#c9c9c9);text-align:center}
+.f1{padding:2.4mm 4mm;font-size:13.5pt;font-weight:800;margin:0 4mm 3mm}
+.f2{padding:2.5mm 5mm;font-size:10.5pt;font-weight:800;line-height:1.8;text-align:right;border-radius:7mm}
+.f2 .ph{text-align:left;direction:rtl}
+</style></head><body><div class="sheet">
+<img class="wm" src="${LOGO_URI}"><div class="b1"></div><div class="b2"></div>
+<img class="logo" src="${LOGO_URI}">
+<div class="meta">${qr ? `<img src="${qr}">` : ''}رقم الوصل<b>${esc(r.id)}</b></div>
+<div class="content">
+<h1>إيصال إستلام أجهزة للصيانة</h1>
+<div class="row date"><span class="lbl">إنه في تاريخ:</span><span class="val">${dd}</span><span class="sl">/</span><span class="val">${mm}</span><span class="sl">/</span><span class="val">${yy}</span><span class="lbl">م</span></div>
+${row('تسلمت أنا:', rep).replace('</span></div>', '</span><span class="lbl" style="font-size:14pt">ممثّلاً لشركة وصلة لصيانة الأجهزة.</span></div>')}
+${row('ما هو:', (type ? type : '') + (r.clientName ? (type ? ' — ' : '') + 'العميل: ' + requestAccountDisplayName(r) : ''))}
+${row('سيريال الجهاز:', sn)}
+${row('مشتملات الجهاز:', '', 1)}
+${row('عيوب ظاهرية في الجهاز:', '', 1)}
+${row('وصف العطل بحسب العميل:', r.deviceDetails, 1)}
+${money_}
+<div class="signs"><div class="sg">توقيع العميل والرقم القومي<div class="sline"></div></div><div class="sg">توقيع ممثل الشركة<div class="sline"></div></div></div>
+<div class="phone">رقم تليفون للتواصل<div class="sline">${esc(phone)}</div></div>
+</div>
+<div class="foot">
+<div class="fbox f1">شركة وصلة لصيانة الأجهزة .. جميع حلولك في مكان واحد</div>
+<div class="fbox f2">برجاء الإحتفاظ بالإيصال حيث لا يتم استلام الجهاز بعد الصيانة إلا بتسليم أصل الإيصال.<br>مواعيد العمل: يومياً من الساعة ٩ صباحاً للساعة ٤ مساءاً ما عدا الجمعة.<br>شارع المشتل من ميدان أسماء الله الحسنى امام المخبز البلدى – اسيوط<br><div class="ph">ت: ٠٨٨٢١٤٧٨٣٩ - ٠١٠٩٧٨٨١٧٥٥ - ٠١١٣٠٢٠٨٩٨٤</div></div>
+</div>
+</div></body></html>`;
+        const w = window.open('', '_blank', 'width=900,height=1100');
+        if (!w) { showToast('⚠️ المتصفح منع نافذة الطباعة، اسمح بالنوافذ المنبثقة', 'warning'); return null; }
+        w.document.write(html); w.document.close();
+        setTimeout(() => { try { w.focus(); w.print(); } catch (e) {} }, 600);
+        return w;
     }
     // وصل إرسال الجهاز من الكاشير إلى الفني واستلامه
     function printTechHandover(r) {
