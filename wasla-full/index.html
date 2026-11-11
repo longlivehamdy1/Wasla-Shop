@@ -1152,9 +1152,6 @@
             margin: 2px;
             white-space: nowrap;
         }
-        .qr-box { display: flex; gap: 4px; align-items: center; min-width: 190px; }
-        .qr-box .qr-sn { flex: 1; min-width: 90px; padding: 6px 8px; font-size: 13px; margin: 0; }
-        .qr-box .table-action-btn { margin: 0; }
         .table-action-btn.warning { background: linear-gradient(90deg, #f39c12, #e67e22); color: #fff; }
         .table-action-btn:hover { transform: scale(1.05); }
 
@@ -4767,52 +4764,6 @@ body{background:radial-gradient(ellipse at 8% 8%,rgba(32,129,185,.17),transparen
         addLog(`استلم ${currentUser.username} جهاز ${request.clientName} (${request.serialNumber})`);
     }
 
-    // ====== الاستلام السريع: خانة سيريال + تأكيد جنب كل جهاز ======
-    function quickReceiveCell(r, role) {
-        if (!(role === 'cashier' || role === 'manager') || r.status !== 'pending') return esc(r.serialNumber == null ? '' : r.serialNumber);
-        const isSvc = !!(r.category && WCAT[r.category] && WCAT[r.category].service);
-        const id = esc(r.id), inId = 'qrSn_' + id;
-        if (isSvc) {
-            return `<button class="table-action-btn warning" onclick="quickReceive('${id}')">📥 تأكيد الاستلام</button>`;
-        }
-        const pre = wIsPlaceholderSN(r.serialNumber) ? '' : esc(r.serialNumber);
-        return `<div class="qr-box">
-            <input type="text" class="qr-sn" id="${inId}" value="${pre}" placeholder="اكتب السيريال" autocomplete="off" onkeydown="if(event.key==='Enter'){event.preventDefault();quickReceive('${id}');}">
-            <button type="button" class="table-action-btn" title="تصوير السيريال" onclick="openCameraModal('${inId}')">📷</button>
-            <button type="button" class="table-action-btn warning" title="تأكيد الاستلام" onclick="quickReceive('${id}')">✔ استلام</button>
-        </div>`;
-    }
-
-    function quickReceive(requestId) {
-        if (!currentUser || (currentUser.role !== 'cashier' && currentUser.role !== 'manager')) return;
-        const data = getData();
-        const request = data.requests.find(r => r.id === requestId);
-        if (!request) { showToast('❌ لم يتم العثور على الطلب', 'error'); return; }
-        if (request.status !== 'pending') { showToast('❌ هذا الطلب تم استلامه بالفعل', 'error'); refreshReceiveViews(); return; }
-        const isSvc = !!(request.category && WCAT[request.category] && WCAT[request.category].service);
-        const inp = document.getElementById('qrSn_' + requestId);
-        const sn = inp ? inp.value.trim() : '';
-        if (!isSvc && !sn) {
-            showToast('⚠️ اكتب السيريال نمبر الأول', 'warning');
-            if (inp) inp.focus();
-            return;
-        }
-        if (sn) request.serialNumber = sn;
-        request.status = 'cashier_received';
-        request.receivedByCashierAt = new Date().toLocaleString('ar-EG');
-        request.receivedTs = Date.now();
-        saveData(data);
-        showToast(`✅ تم استلام الجهاز ${request.serialNumber}`, 'success');
-        addLog(`استلم ${currentUser.username} جهاز ${request.clientName} (${request.serialNumber})`);
-        refreshReceiveViews();
-        updateAllStats();
-    }
-
-    function refreshReceiveViews() {
-        if (currentUser && currentUser.role === 'manager') { if (document.getElementById('mSearchInput')) renderManagerSearch(); }
-        else if (document.getElementById('cashierRequestsContainer')) loadCashierRequests();
-    }
-
     function submitProgress() {
         const requestId = document.getElementById('progRequestId').value.trim();
         const progress = parseInt(document.getElementById('progValue').value);
@@ -5086,10 +5037,6 @@ ${i+1}. المعرف: ${r.id}
 
         const sorted = [...requests].reverse().sort((a, b) => (isLate(b) ? 1 : 0) - (isLate(a) ? 1 : 0));
 
-        // حفظ اللي اتكتب في خانات الاستلام السريع قبل إعادة الرسم (المزامنة بترسم الجدول تاني)
-        const qrKeep = {}; let qrFocus = null;
-        container.querySelectorAll('input.qr-sn').forEach(i => { if (i.value) qrKeep[i.id] = i.value; if (document.activeElement === i) qrFocus = i.id; });
-
         let html = `<div class="table-responsive"><table>
             <thead><tr>
                 <th>#</th>
@@ -5147,7 +5094,7 @@ ${i+1}. المعرف: ${r.id}
                 <td>${esc(requestAccountDisplayName(r))}</td>
                 <td style="font-size:12px;">${r.clientPhone || '-'}</td>
                 <td style="font-size:12px;">${r.clientEmail || '-'}</td>
-                <td>${quickReceiveCell(r, role)}</td>
+                <td>${r.serialNumber}</td>
                 <td>${r.deviceType || '-'}</td>
                 <td><span class="badge ${priority.class}" style="padding:2px 10px;border-radius:10px;font-size:10px;">${priority.text}</span></td>
                 <td>
@@ -5172,8 +5119,6 @@ ${i+1}. المعرف: ${r.id}
 
         html += '</tbody></table></div>';
         tableContainer.innerHTML = html;
-        Object.keys(qrKeep).forEach(id => { const i = document.getElementById(id); if (i) i.value = qrKeep[id]; });
-        if (qrFocus) { const i = document.getElementById(qrFocus); if (i) { i.focus(); try { i.setSelectionRange(i.value.length, i.value.length); } catch (e) {} } }
     }
 
     // ================================================================
@@ -6520,7 +6465,7 @@ window.holdConfirm = function (message, opts) {
 
     /* 1) سكرول ناعم للصفحة، والمودالات والقوائم الداخلية بتسكرول عادي */
     var lenis = null;
-    if (window.Lenis) {
+    if (window.Lenis && !window.matchMedia('(pointer: coarse)').matches) {
         lenis = new Lenis({
             lerp: 0.1,
             allowNestedScroll: true,
@@ -7261,7 +7206,7 @@ window.holdConfirm = function (message, opts) {
     addEventListener('pointermove', function (e) { mouse.x = e.clientX; mouse.y = e.clientY; });
     addEventListener('pointerleave', function () { mouse.x = mouse.y = -999; });
     gsap.ticker.add(function () {
-        if (!shown()) return;
+        if (!shown() || window.__wScrolling) return;
         cx.clearRect(0, 0, W, H);
         for (var i = 0; i < pts.length; i++) {
             var p = pts[i]; p.x += p.vx; p.y += p.vy;
@@ -7352,7 +7297,7 @@ window.holdConfirm = function (message, opts) {
     size(); addEventListener('resize', size);
     addEventListener('pointermove', function (e) { m.x = e.clientX; m.y = e.clientY; }, { passive: true });
     gsap.ticker.add(function () {
-        if (!inApp()) return;
+        if (!inApp() || window.__wScrolling) return;
         cx.clearRect(0, 0, W, H);
         for (var i = 0; i < pts.length; i++) {
             var p = pts[i]; p.x += p.vx; p.y += p.vy;
@@ -8022,6 +7967,41 @@ function whDoMove() {
 @keyframes mUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
 @keyframes mFade { from { opacity: 0; } to { opacity: 1; } }
 </style>
+
+<style id="wasla-scroll-perf">
+/* ===== Scroll performance: يشيل أتقل حاجات في السكرول (blur كتير + خلفية ثابتة + تعارض Lenis) ===== */
+html.lenis, html.lenis body { height: auto; }
+html.lenis { scroll-behavior: auto !important; }
+.lenis.lenis-stopped { overflow: hidden; }
+body, body.login-mode { background-attachment: scroll !important; }
+html.w-light body { background-attachment: scroll !important; }
+/* بلور الكروت واللوحات الكبيرة: بيتعاد رسمه كل فريم فوق الكانفاس المتحرك. بنستبدله بخلفية معتمة أكتر */
+#managerPanel, .wasla-glass-hero, #managerStats .stat-card, #manager-dashboard .chart-box,
+body:not(.login-mode) .manager-tabs, #managerTabs, body:not(.login-mode) .search-box,
+.lg-svc, .lg-track .service-chip, body.login-mode .login-box, .login-box,
+body:not(.login-mode) .stat-card, body:not(.login-mode) .card, body:not(.login-mode) .user-card, body:not(.login-mode) .ct-card {
+  -webkit-backdrop-filter: none !important; backdrop-filter: none !important;
+}
+#managerPanel { background: rgba(12,19,34,.88) !important; }
+#managerStats .stat-card, #manager-dashboard .chart-box { background-color: rgba(18,28,46,.92) !important; }
+.w-aurora i { filter: none !important; will-change: auto; } /* الـ radial-gradient بيعمل نفس الشكل من غير blur(70px) */
+/* الأشرطة الثابتة: بلور أخف */
+body.m-on #mBar, body.m-on #mNav, #wDock { -webkit-backdrop-filter: blur(6px) !important; backdrop-filter: blur(6px) !important; }
+/* بنقلل الشغل وقت السكرول */
+html.w-scrolling .lg-scroll-cue span, html.w-scrolling .lg-title .w > span { animation-play-state: paused !important; }
+</style>
+<script>
+/* علامة "بيتسكرول" بسيطة: الكانفاسات بتوقف رسم وقت السكرول وترجع بعد ما يخلص */
+(function () {
+  var t, root = document.documentElement;
+  addEventListener('scroll', function () {
+    if (!window.__wScrolling) { window.__wScrolling = true; root.classList.add('w-scrolling'); }
+    clearTimeout(t);
+    t = setTimeout(function () { window.__wScrolling = false; root.classList.remove('w-scrolling'); }, 140);
+  }, { passive: true });
+})();
+</script>
+
 
 <div id="mBar" aria-hidden="true">
   <img class="m-logo" id="mLogo" alt="">
