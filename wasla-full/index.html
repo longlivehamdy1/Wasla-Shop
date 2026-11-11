@@ -2589,6 +2589,8 @@ body{background:radial-gradient(ellipse at 8% 8%,rgba(32,129,185,.17),transparen
         </div>
         <select id="recDeviceType"></select>
         <textarea id="recDeviceDetails" placeholder="تفاصيل الجهاز (المواصفات، العيوب، الملاحظات)"></textarea>
+        <label style="color:#8892b0;font-size:14px;display:block;margin-top:6px;">مشتملات الجهاز (يكتبها الكاشير فقط، وتظهر في وصل العميل):</label>
+        <textarea id="recAccessories" placeholder="مثال: الجهاز + شاحن + كابل + حقيبة"></textarea>
         <button class="btn btn-warning" onclick="submitReceive()">تأكيد الاستلام</button>
     </div>
 </div>
@@ -2674,13 +2676,20 @@ body{background:radial-gradient(ellipse at 8% 8%,rgba(32,129,185,.17),transparen
     </div>
 </div>
 
-<!-- مودال وصل استلام الفني -->
-<div class="modal" id="techReceiptModal">
+<!-- مودال التقرير الفني (من الفني إلى الكاشير) -->
+<div class="modal" id="techReportModal">
     <div class="modal-content">
-        <span class="close-btn" onclick="closeModal('techReceiptModal')">&times;</span>
-        <h2>🧾 وصل استلام الفني</h2>
-        <div id="techReceiptResult" class="invoice-box"></div>
-        <button class="btn" onclick="printTechReceipt()" style="margin-top:8px;">🖨️ طباعة</button>
+        <span class="close-btn" onclick="closeModal('techReportModal')">&times;</span>
+        <h2>📝 التقرير الفني</h2>
+        <input type="text" id="trRequestId" readonly>
+        <div class="ct-sub" id="trInfo" style="margin:6px 0;"></div>
+        <label class="om-l">الأعطال التي وُجدت بالفحص (عطل في كل سطر)</label>
+        <textarea id="trFaults" rows="4" placeholder="مثال:&#10;حساس البصمة تالف&#10;شاشة الجهاز لا تعمل"></textarea>
+        <label class="om-l">قطع الغيار المطلوبة (قطعة في كل سطر)</label>
+        <textarea id="trParts" rows="3" placeholder="مثال:&#10;حساس بصمة أصابع&#10;وحدة تغذية"></textarea>
+        <label class="om-l">ملاحظات إضافية (اختياري)</label>
+        <textarea id="trNotes" rows="2"></textarea>
+        <button class="btn btn-success" onclick="submitTechReport()">💾 حفظ وإرسال للكاشير وطباعة</button>
     </div>
 </div>
 
@@ -4739,6 +4748,7 @@ body{background:radial-gradient(ellipse at 8% 8%,rgba(32,129,185,.17),transparen
         request.status = 'cashier_received';
         request.deviceType = deviceType;
         request.deviceDetails = deviceDetails;
+        request.accessories = (document.getElementById('recAccessories').value || '').trim();
         request.receivedByCashierAt = new Date().toLocaleString('ar-EG');
         request.receivedTs = Date.now();
         saveData(data);
@@ -4748,6 +4758,7 @@ body{background:radial-gradient(ellipse at 8% 8%,rgba(32,129,185,.17),transparen
         document.getElementById('recRequestId').value = '';
         document.getElementById('recSerial').value = '';
         document.getElementById('recDeviceDetails').value = '';
+        document.getElementById('recAccessories').value = '';
         loadCashierRequests();
         updateAllStats();
         addLog(`استلم ${currentUser.username} جهاز ${request.clientName} (${request.serialNumber})`);
@@ -5206,7 +5217,7 @@ ${i+1}. المعرف: ${r.id}
                 <td>${esc(requestAccountDisplayName(r))}</td>
                 <td>${r.serialNumber}</td>
                 <td>${r.deviceType || '-'}</td>
-                <td style="font-size:12px;max-width:180px;word-break:break-word;">${r.deviceDetails || '-'}</td>
+                <td style="font-size:12px;max-width:180px;word-break:break-word;">${esc(r.deviceDetails || '-')}${r.accessories ? '<div style="margin-top:4px;color:#8892b0;">🎒 المشتملات: ' + esc(r.accessories) + '</div>' : ''}</td>
                 <td>${r.progress}%</td>
                 <td>${r.techStatus === 'sent' ? '<span class="tech-tag sent">📤 بانتظار تأكيدك</span>' : '<span class="tech-tag ok">🔧 استلمته</span>'}</td>
                 <td>${action}</td>
@@ -5235,7 +5246,6 @@ ${i+1}. المعرف: ${r.id}
         r.techReceivedBy = currentUser.username;
         r.techReceivedAt = new Date().toLocaleString('ar-EG');
         r.techReceivedTs = Date.now();
-        r.techReceiptNo = 'T-' + r.id;
         // بعد استلام الفني الجهاز يدخل المخزن مباشرة (بدون قبول من المدير)
         if (r.status === 'cashier_received') {
             r.status = 'manager_accepted';
@@ -5245,46 +5255,11 @@ ${i+1}. المعرف: ${r.id}
 
         if (r.sentToTechBy) {
             addChatMessage(currentUser.username, r.sentToTechBy,
-                `🧾 وصل استلام: استلمت الجهاز (السيريال ${r.serialNumber} — العميل ${r.clientName} — معرف الطلب ${r.id}) بتاريخ ${r.techReceivedAt}. رقم الوصل: ${r.techReceiptNo}`);
+                `✅ استلمت الجهاز (السيريال ${r.serialNumber} — العميل ${r.clientName} — معرف الطلب ${r.id}) بتاريخ ${r.techReceivedAt}.`);
         }
-        showToast('✅ تم تأكيد الاستلام وإرسال الوصل للكاشير', 'success');
+        showToast('✅ تم تأكيد الاستلام وإبلاغ الكاشير', 'success');
         addLog(`أكد الفني ${currentUser.username} استلام جهاز ${r.clientName} (${r.serialNumber})`);
         loadTechnicianRequests();
-        showTechReceipt(requestId);
-    }
-
-    // --- وصل الفني (للكاشير) ---
-    let currentTechReceipt = '', currentTechReceiptId = '';
-    function showTechReceipt(requestId) {
-        const data = getData();
-        const r = data.requests.find(x => x.id === requestId);
-        if (!r || r.techStatus !== 'received') { showToast('⚠️ لا يوجد وصل فني لهذا الطلب بعد', 'warning'); return; }
-        currentTechReceiptId = requestId;
-        currentTechReceipt = `
-========================================
-Wasla
-========================================
-وصل استلام جهاز من الكاشير إلى الفني
-----------------------------------------
-رقم الوصل    : ${r.techReceiptNo || ('T-' + r.id)}
-معرف الطلب   : ${r.id}
-العميل / الوحدة : ${requestAccountDisplayName(r)}
-السيريال     : ${r.serialNumber}
-نوع الجهاز   : ${r.deviceType || 'غير محدد'}
-تفاصيل الجهاز: ${r.deviceDetails || 'لا يوجد'}
-----------------------------------------
-أرسله الكاشير : ${r.sentToTechBy || '-'}  (${r.sentToTechAt || '-'})
-استلمه الفني  : ${r.techReceivedBy}  (${r.techReceivedAt})
-----------------------------------------
-أقر أنا الفني باستلام الجهاز المذكور أعلاه
-========================================`.trim();
-        document.getElementById('techReceiptResult').textContent = currentTechReceipt;
-        openModal('techReceiptModal');
-    }
-
-    function printTechReceipt() {
-        if (!currentTechReceiptId) return;
-        printTechHandoverById(currentTechReceiptId);
     }
 
     // --- وصل العميل (يطبعه الكاشير) ---
@@ -5396,7 +5371,8 @@ ${o.notice ? `<div class="note">${esc(o.notice)}</div>` : ''}
         const type = r.deviceType || '';
         const sn = wIsPlaceholderSN(r.serialNumber) ? '' : r.serialNumber;
         const phone = r.clientPhone || '';
-        const money_ = Number(r.price) > 0
+        const isGov = isGovReq(r);
+        const money_ = (!isGov && Number(r.price) > 0)
             ? `<div class="fin">التكلفة: <b>${esc(money(r.price))}</b> &nbsp;|&nbsp; المدفوع: <b>${esc(money(paidOf(r)))}</b> &nbsp;|&nbsp; المتبقي: <b>${esc(money(remainingOf(r)))}</b>${warrantyDaysOf(r) > 0 ? ' &nbsp;|&nbsp; الضمان: <b>' + esc(ar(warrantyDaysOf(r))) + ' يوم من تاريخ التسليم</b>' : ''}</div>` : '';
         const qr = qrDataUrl(trackUrl(r.id), 120);
         // سطر بيانات: لو القيمة فاضية بيطلع سطر منقّط للكتابة باليد
@@ -5442,9 +5418,10 @@ h1{margin:0 0 6mm;text-align:center;font-size:19pt;font-weight:800;text-decorati
 <h1>إيصال إستلام أجهزة للصيانة</h1>
 <div class="row date"><span class="lbl">إنه في تاريخ:</span><span class="val">${dd}</span><span class="sl">/</span><span class="val">${mm}</span><span class="sl">/</span><span class="val">${yy}</span><span class="lbl">م</span></div>
 ${row('تسلمت أنا:', rep).replace('</span></div>', '</span><span class="lbl" style="font-size:14pt">ممثّلاً لشركة وصلة لصيانة الأجهزة.</span></div>')}
-${row('ما هو:', (type ? type : '') + (r.clientName ? (type ? ' — ' : '') + 'العميل: ' + requestAccountDisplayName(r) : ''))}
+${row(isGov ? 'الإدارة:' : 'العميل:', requestAccountDisplayName(r))}
+${row('ما هو:', type)}
 ${row('سيريال الجهاز:', sn)}
-${row('مشتملات الجهاز:', '', 1)}
+${row('مشتملات الجهاز:', r.accessories, 1)}
 ${row('عيوب ظاهرية في الجهاز:', '', 1)}
 ${row('وصف العطل بحسب العميل:', r.deviceDetails, 1)}
 ${money_}
@@ -5462,30 +5439,126 @@ ${money_}
         setTimeout(() => { try { w.focus(); w.print(); } catch (e) {} }, 600);
         return w;
     }
-    // وصل إرسال الجهاز من الكاشير إلى الفني واستلامه
-    function printTechHandover(r) {
-        const got = r.techStatus === 'received';
-        const rows = [
-            ['رقم الوصل', r.techReceiptNo || ('T-' + r.id)],
-            ['معرف الطلب', r.id],
-            ['اسم العميل / الوحدة', requestAccountDisplayName(r)],
-            ['نوع الجهاز', r.deviceType || 'غير محدد'],
-            ['السيريال نمبر', r.serialNumber],
-            ['تفاصيل الجهاز', r.deviceDetails || 'لا يوجد'],
-            ['أرسله الكاشير', (r.sentToTechBy || '—') + (r.sentToTechAt ? ' — ' + r.sentToTechAt : '')],
-            ['الفني', r.sentToTech || r.techReceivedBy || '—'],
-            ['استلمه الفني', got ? (r.techReceivedBy + ' — ' + r.techReceivedAt) : 'بانتظار تأكيد الفني']
-        ];
-        return letterheadPrint({
-            title: 'وصل إرسال واستلام جهاز', subtitle: 'من الكاشير إلى الفني', rows,
-            notice: 'أقر أنا الفني باستلام الجهاز المذكور أعلاه من الكاشير.',
-            signs: ['توقيع الكاشير (المُسلِّم)', 'توقيع الفني (المستلم)'], qr: qrDataUrl(trackUrl(r.id), 120)
-        });
+
+    // ================================================================
+    //  التقرير الفني: يكتبه الفني ويطلعه للكاشير (بدل وصل الكاشير للفني)
+    // ================================================================
+    function isGovReq(r) {
+        const u = getData().users.find(x => x.username === r.clientName);
+        return !!(u && u.clientType === 'gov');
     }
-    function printTechHandoverById(id) {
+    function openTechReport(id) {
         const r = getData().requests.find(x => x.id === id);
-        if (!r) { showToast('❌ لم يتم العثور على الطلب', 'error'); return; }
-        printTechHandover(r);
+        if (!r || !currentUser) return;
+        if (currentUser.role !== 'technician' || r.sentToTech !== currentUser.username) { showToast('❌ التقرير الفني يكتبه الفني المسؤول عن الجهاز فقط', 'error'); return; }
+        const t = r.techReport || {};
+        document.getElementById('trRequestId').value = r.id;
+        document.getElementById('trInfo').textContent = `${requestAccountDisplayName(r)} • ${r.deviceType || '-'} • ${r.serialNumber}`;
+        document.getElementById('trFaults').value = (t.faults || []).join('\n');
+        document.getElementById('trParts').value = (t.parts || []).join('\n');
+        document.getElementById('trNotes').value = t.notes || '';
+        openModal('techReportModal');
+    }
+    function submitTechReport() {
+        if (!currentUser || currentUser.role !== 'technician') return;
+        const data = getData();
+        const r = data.requests.find(x => x.id === document.getElementById('trRequestId').value);
+        if (!r || r.sentToTech !== currentUser.username) { showToast('❌ هذا الجهاز غير مرسل إليك', 'error'); return; }
+        const lines = id => document.getElementById(id).value.split('\n').map(x => x.trim()).filter(Boolean);
+        const faults = lines('trFaults'), parts = lines('trParts');
+        if (!faults.length) { showToast('⚠️ اكتب عطل واحد على الأقل', 'warning'); return; }
+        r.techReport = { faults, parts, notes: document.getElementById('trNotes').value.trim(), by: currentUser.username, at: new Date().toLocaleString('ar-EG'), ts: Date.now() };
+        saveData(data);
+        const cashier = r.sentToTechBy || getFirstCashier();
+        if (cashier) addChatMessage(currentUser.username, cashier, `📄 تقرير فني جديد للجهاز (السيريال ${r.serialNumber} — العميل ${r.clientName} — معرف الطلب ${r.id}). الأعطال: ${faults.join('، ')}${parts.length ? ' — قطع الغيار: ' + parts.join('، ') : ''}`);
+        addLog(`كتب الفني ${currentUser.username} تقريراً فنياً للطلب ${r.id}`);
+        showToast('✅ تم حفظ التقرير وإرساله للكاشير', 'success');
+        closeModal('techReportModal');
+        loadTechnicianRequests();
+        printTechReport(r);
+    }
+    function printTechReportById(id) {
+        const r = getData().requests.find(x => x.id === id);
+        if (!r || !r.techReport) { showToast('❌ لا يوجد تقرير فني لهذا الطلب', 'error'); return; }
+        printTechReport(r);
+    }
+    function printTechReport(r) {
+        const t = r.techReport || { faults: [], parts: [], notes: '' };
+        const ar = v => String(v == null ? '' : v).replace(/\d/g, d => '٠١٢٣٤٥٦٧٨٩'[d]);
+        const days = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
+        const d = new Date(t.ts || Date.now());
+        const dateTxt = ar(`${d.getDate()} / ${d.getMonth() + 1} / ${d.getFullYear()}`);
+        const gov = isGovReq(r);
+        const sn = wIsPlaceholderSN(r.serialNumber) ? '' : r.serialNumber;
+        const list = (arr, min) => { const a = arr.slice(); while (a.length < (min || 0)) a.push(''); return '<ul>' + a.map(x => `<li>${x ? esc(x) : '&nbsp;.'}</li>`).join('') + '</ul>'; };
+        const qr = qrDataUrl(trackUrl(r.id), 120);
+        const to = gov ? `السادة:- ${esc(requestAccountDisplayName(r))}` : `السيد/ة:- ${esc(requestAccountDisplayName(r))}`;
+        const ask = gov
+            ? 'فبرجاء من سيادتكم مخاطبتنا بالموافقة علي تركيب قطع الغيار سالفة الذكر وفقاً للتعاقد المُبرم مع المديرية، وتسليم الجهاز في أسرع وقت ممكن.'
+            : 'فبرجاء من سيادتكم التكرم بالموافقة علي تركيب قطع الغيار سالفة الذكر، وإبلاغنا بقراركم في أسرع وقت ممكن.';
+        const notes = ['يتم تصدير التقرير من نسختين بواقع نسخة لدي كل طرف.'].concat(t.notes ? [t.notes] : []);
+        const html = `<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><title>تقرير فني — ${esc(r.id)}</title><style>
+@page{size:A4;margin:0}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;background:#fff}
+body{font-family:Cairo,Tahoma,Arial,sans-serif;color:#000;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.sheet{position:relative;width:210mm;min-height:296.5mm;display:flex;flex-direction:column;padding:13mm 16mm 12mm}
+.b1{position:absolute;inset:8mm;border:1.1mm solid #000;pointer-events:none}
+.b2{position:absolute;inset:10.2mm;border:.35mm solid #000;pointer-events:none}
+.wm{position:absolute;left:50%;top:46%;width:175mm;transform:translate(-50%,-50%) rotate(-30deg);opacity:.16;mix-blend-mode:multiply;pointer-events:none}
+.top{display:flex;direction:ltr;justify-content:space-between;align-items:flex-start;position:relative;z-index:1}
+.logo{width:42mm}
+.meta{width:34mm;direction:rtl;text-align:center;font-size:7.5pt;line-height:1.35}
+.meta img{width:20mm;height:20mm;display:block;margin:0 auto 1mm}
+.meta b{display:block;font-size:8.5pt;word-break:break-all}
+.content{position:relative;z-index:1;flex:1;font-size:11.5pt;line-height:1.5;font-weight:600;margin-top:0}
+h1{margin:0 0 2mm;text-align:center;font-size:18pt;font-weight:800;text-decoration:underline;text-underline-offset:1.6mm}
+.p{margin:0}
+.b{font-weight:800}
+ul{margin:0 0 1mm;padding:0 9mm 0 0}
+li{line-height:1.4}
+.ask{margin-top:2mm}
+.thx{margin:2mm 0 0 0;text-align:center;font-weight:800}
+.nt{font-weight:800;text-decoration:underline;margin-top:2mm}
+.sign{margin-top:1mm;font-weight:800;font-size:12pt}
+.foot{position:relative;z-index:1;margin-top:2mm}
+.fbox{border:.4mm solid #444;border-radius:3mm;background:linear-gradient(#eee,#c9c9c9);text-align:center}
+.f1{padding:2.2mm 4mm;font-size:13pt;font-weight:800;margin:0 4mm 2.5mm}
+.f2{padding:2mm 5mm;font-size:9.5pt;font-weight:800;line-height:1.6;text-align:right;border-radius:7mm}
+.f2 .ph{text-align:left}
+</style></head><body><div class="sheet">
+<img class="wm" src="${LOGO_URI}"><div class="b1"></div><div class="b2"></div>
+<div class="top"><img class="logo" src="${LOGO_URI}"><div class="meta">${qr ? `<img src="${qr}">` : ''}رقم الطلب<b>${esc(r.id)}</b></div></div>
+<div class="content">
+<h1>تقرير فنى</h1>
+<p class="p b">${to}</p>
+<p class="p" style="text-align:center">تحية طيبة وبعد ،،،،</p>
+<p class="p">يتشرف قسم الدعم الفنى بشركة وصلة بإحاطتكم بما يلى:</p>
+<p class="p"><span class="b">إنه في يوم :-</span> ${days[d.getDay()]} الموافق ${dateTxt} م</p>
+<p class="p"><span class="b">تسلمت أنا:-</span> ${esc(t.by || r.techReceivedBy || '')} ممثلاً لشركة وصلة لصيانةالأجهزة.</p>
+<p class="p"><span class="b">ما هو:-</span> ${esc(r.deviceType || '')}</p>
+<p class="p"><span class="b">سيريال الجهاز :-</span> ${esc(sn)}</p>
+<p class="p"><span class="b">وصف العطل بحسب العميل:-</span> ${esc(r.deviceDetails || '')}</p>
+<p class="p b">وبالفحص وجدنا ما يلي من أعطال:</p>
+${list(t.faults, 3)}
+<p class="p b">وتحتاج هذه الأعطال قطع الغيار الآتية لإصلاح تلك الأعطال:</p>
+${list(t.parts, 3)}
+<p class="p ask">${ask}</p>
+<p class="thx">ولسيادتكم جزيل الشكر وفائق الإحترام،،،</p>
+<p class="nt">ملاحظات:</p>
+${list(notes)}
+<p class="sign">يعتمد،،<br>مسئول الدعم الفنى${t.by ? ' / ' + esc(t.by) : ''}</p>
+</div>
+<div class="foot">
+<div class="fbox f1">شركة وصلة لصيانة الأجهزة .. جميع حلولك في مكان واحد</div>
+<div class="fbox f2">• برجاء الإحتفاظ بالإيصال حيث لا يتم استلام الجهاز بعد الصيانة إلا بتسليم أصل الإيصال.<br>• لا يتم تحصيل أي مبالغ نقداً إلا بإيصال إستلام نقدية مختوم بختم الشركة.<br>مواعيد العمل: يومياً من الساعة ٩ صباحاً للساعة ٤ مساءاً ما عدا الجمعة.<br>شارع المشتل من ميدان أسماء الله الحسنى امام المخبز البلدى – اسيوط<br><div class="ph">ت: ٠٨٨٢١٤٧٨٣٩ - ٠١٠٩٧٨٨١٧٥٥ - ٠١١٣٠٢٠٨٩٨٤</div></div>
+</div>
+</div></body></html>`;
+        const w = window.open('', '_blank', 'width=900,height=1100');
+        if (!w) { showToast('⚠️ المتصفح منع نافذة الطباعة، اسمح بالنوافذ المنبثقة', 'warning'); return null; }
+        w.document.write(html); w.document.close();
+        setTimeout(() => { try { w.focus(); w.print(); } catch (e) {} }, 600);
+        return w;
     }
 
     const getFirstCashier = () => (getData().users.find(u => u.role === 'cashier') || {}).username;
@@ -5651,8 +5724,7 @@ ${money_}
         if (inShop && r.techStatus !== 'received') {
             btns.push(`<button class="table-action-btn" onclick="openSendToTech('${r.id}')">${r.techStatus === 'sent' ? '🔁 إعادة الإرسال للفني' : '📤 إرسال للفني'}</button>`);
         }
-        if (r.techStatus === 'received') btns.push(`<button class="table-action-btn" onclick="showTechReceipt('${r.id}')">🧾 وصل الفني</button>`);
-        else if (r.techStatus === 'sent') btns.push(`<button class="table-action-btn" onclick="printTechHandoverById('${r.id}')">🖨️ وصل إرسال للفني</button>`);
+        if (r.techReport) btns.push(`<button class="table-action-btn" onclick="printTechReportById('${r.id}')">📄 التقرير الفني</button>`);
         if (r.status !== 'pending') btns.push(`<button class="table-action-btn" onclick="openClientReceipt('${r.id}')">🖨️ وصل العميل</button>`);
         btns.push(`<button class="table-action-btn" onclick="openOrderModal('${r.id}')">⚙️ إدارة (سعر/دفع/ملاحظات)</button>`);
         btns.push(`<button class="table-action-btn" onclick="openWaModal('${r.id}')">📲 واتساب للعميل</button>`);
@@ -5669,9 +5741,9 @@ ${money_}
         return `<span class="tech-tag ${rem > 0 ? 'sent' : 'ok'}">${rem > 0 ? '💵 متبقي ' + money(rem) : '✔️ مدفوع بالكامل'}</span>`;
     }
     function techActions(r) {
-        if (r.techStatus === 'sent') return `<button class="table-action-btn" onclick="confirmTechReceive('${r.id}')">✅ تأكيد الاستلام وإرسال الوصل</button>`;
+        if (r.techStatus === 'sent') return `<button class="table-action-btn" onclick="confirmTechReceive('${r.id}')">✅ تأكيد الاستلام</button>`;
         return `<div style="display:flex;flex-direction:column;gap:4px;">
-            <button class="table-action-btn" onclick="showTechReceipt('${r.id}')">🧾 عرض الوصل</button>
+            <button class="table-action-btn" onclick="openTechReport('${r.id}')">📝 ${r.techReport ? 'تعديل/طباعة التقرير الفني' : 'التقرير الفني'}</button>
             <button class="table-action-btn" onclick="openOrderModal('${r.id}')">⚙️ إدارة (عرض سعر/موعد/قطع)</button>
             ${r.status !== 'ready_for_pickup' && r.status !== 'picked_up' ? `<button class="table-action-btn warning" onclick="quickProgress('${r.id}')">📊 تحديث النسبة</button>` : ''}
         </div>`;
