@@ -4717,6 +4717,31 @@ body{background:radial-gradient(ellipse at 8% 8%,rgba(32,129,185,.17),transparen
     }
 
     // ====== دوال الكاشير ======
+    // استلام سريع من الجدول: اكتب السيريال وأكّد على طول من غير ما تفتح نافذة الاستلام
+    function quickReceive(id) {
+        const data = getData();
+        const request = data.requests.find(r => r.id === id);
+        if (!request) { showToast('❌ لم يتم العثور على الطلب', 'error'); return; }
+        if (request.status !== 'pending') { showToast('❌ هذا الطلب تم استلامه بالفعل', 'error'); refreshCurrentView(); return; }
+        const el = document.getElementById('qrs_' + id);
+        const serial = ((el && el.value) || '').trim();
+        const isSvc = !!(request.category && WCAT[request.category] && WCAT[request.category].service);
+        if (!isSvc && !serial && wIsPlaceholderSN(request.serialNumber)) {
+            showToast('⚠️ اكتب السيريال نمبر الأول', 'warning');
+            if (el) el.focus();
+            return;
+        }
+        if (serial) request.serialNumber = serial;
+        request.status = 'cashier_received';
+        request.receivedByCashierAt = new Date().toLocaleString('ar-EG');
+        request.receivedTs = Date.now();
+        saveData(data);
+        showToast('✅ تم استلام الجهاز', 'success');
+        addLog(`استلم ${currentUser.username} جهاز ${request.clientName} (${request.serialNumber})`);
+        try { loadCashierRequests(); } catch (e) {}
+        try { updateAllStats(); } catch (e) {}
+        try { refreshCurrentView(); } catch (e) {}
+    }
     function submitReceive() {
         const requestId = document.getElementById('recRequestId').value.trim();
         const deviceType = document.getElementById('recDeviceType').value;
@@ -5720,6 +5745,15 @@ ${list(notes)}
     // ---------------- أزرار الطلب للكاشير/المدير/الفني ----------------
     function cashierActions(r) {
         const btns = [];
+        if (r.status === 'pending') {
+            const isSvc = !!(r.category && WCAT[r.category] && WCAT[r.category].service);
+            const sn = wIsPlaceholderSN(r.serialNumber) ? '' : r.serialNumber;
+            btns.push(`<div class="qr-box" style="display:flex;gap:4px;align-items:center;">
+                <input type="text" id="qrs_${esc(r.id)}" value="${esc(sn)}" placeholder="${isSvc ? 'السيريال (اختياري)' : 'اكتب السيريال'}" autocomplete="off"
+                    style="width:130px;min-width:0;padding:6px 8px;font-size:13px;margin:0;" onkeydown="if(event.key==='Enter'){event.preventDefault();quickReceive('${esc(r.id)}');}">
+                <button class="table-action-btn" style="white-space:nowrap;" onclick="quickReceive('${esc(r.id)}')">✅ استلام</button>
+            </div>`);
+        }
         const inShop = r.status === 'cashier_received' || r.status === 'manager_accepted';
         if (inShop && r.techStatus !== 'received') {
             btns.push(`<button class="table-action-btn" onclick="openSendToTech('${r.id}')">${r.techStatus === 'sent' ? '🔁 إعادة الإرسال للفني' : '📤 إرسال للفني'}</button>`);
