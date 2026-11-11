@@ -5761,7 +5761,7 @@ ${list(notes)}
         const role = currentUser.role, money$ = role === 'cashier' || role === 'manager';
         let h = `<h2>⚙️ إدارة الطلب</h2><div class="ct-sub" style="margin-bottom:8px;">${esc(r.id)} • ${esc(requestAccountDisplayName(r))} • ${esc(r.deviceType || '-')} • ${esc(r.serialNumber)}</div>`;
 
-        if (role === 'manager') {
+        if (role === 'manager' || role === 'cashier') {
             const cur = r.deviceType || '';
             let known = false;
             const opts = WCAT_ORDER.map(k => {
@@ -5822,7 +5822,7 @@ ${list(notes)}
     }
     function omReq() { return getData().requests.find(x => x.id === orderModalId); }
     function omSaveDeviceType() {
-        const data = getData(), r = omReq(); if (!r || !currentUser || currentUser.role !== 'manager') return;
+        const data = getData(), r = omReq(); if (!r || !currentUser || !['manager', 'cashier'].includes(currentUser.role)) return;
         const el = $id('omDeviceType'); if (!el) return;
         const val = el.value;
         if (!val) { showToast('⚠️ اختر نوع الجهاز', 'warning'); return; }
