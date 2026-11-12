@@ -5789,6 +5789,14 @@ ${list(notes)}
         const role = currentUser.role, money$ = role === 'cashier' || role === 'manager';
         let h = `<h2>⚙️ إدارة الطلب</h2><div class="ct-sub" style="margin-bottom:8px;">${esc(r.id)} • ${esc(requestAccountDisplayName(r))} • ${esc(r.deviceType || '-')} • ${esc(r.serialNumber)}</div>`;
 
+        if (money$) {
+            const inList = WCAT_ORDER.some(k => WCAT[k].items.some(it => it[0] === r.deviceType));
+            h += omSec('🔄 نوع الجهاز / الخدمة', `
+            <div class="ct-sub" style="margin-bottom:6px;">النوع الحالي: <b>${esc(r.deviceType || '-')}</b></div>
+            <select id="omType">${r.deviceType && !inList ? `<option value="${esc(r.deviceType)}" selected>${esc(r.deviceType)}</option>` : ''}${WCAT_ORDER.map(k => `<optgroup label="${esc(WCAT[k].icon + ' ' + WCAT[k].title)}">${WCAT[k].items.map(it => `<option value="${esc(it[0])}"${it[0] === r.deviceType ? ' selected' : ''}>${esc(it[1] + ' ' + it[2])}</option>`).join('')}</optgroup>`).join('')}</select>
+            <button class="btn btn-success" onclick="omSaveType()">💾 حفظ نوع الجهاز</button>`);
+        }
+
         h += omSec('📅 الموعد المتوقع' + (money$ ? ' والضمان' : ''), `
             <label class="om-l">تاريخ التسليم المتوقع</label><input type="date" id="omEta" value="${esc(r.eta || '')}">
             ${money$ ? `<label class="om-l">مدة الضمان بالأيام (من تاريخ التسليم)</label><input type="number" id="omWarranty" min="0" value="${warrantyDaysOf(r)}">` : ''}
@@ -5907,6 +5915,22 @@ ${list(notes)}
         if (typeof updateAllStats === 'function') updateAllStats();
     }
     function omReq() { return getData().requests.find(x => x.id === orderModalId); }
+    function omSaveType() {
+        if (!currentUser || (currentUser.role !== 'cashier' && currentUser.role !== 'manager')) return;
+        const data = getData(), r = omReq(); if (!r) return;
+        const t = $id('omType').value;
+        if (!t || t === r.deviceType) { showToast('لا يوجد تغيير في النوع', 'info'); return; }
+        const old = r.deviceType || '-';
+        r.deviceType = t;
+        const cat = WCAT_ORDER.find(k => WCAT[k].items.some(it => it[0] === t));
+        if (cat) r.category = cat;
+        saveData(data);
+        addLog(`غيّر ${currentUser.username} نوع جهاز الطلب ${r.id} من ${old} إلى ${t}`);
+        showToast('✅ تم حفظ نوع الجهاز', 'success');
+        renderOrderModal();
+        if (currentUser.role === 'cashier') { if (typeof loadCashierRequests === 'function') loadCashierRequests(); }
+        else if (typeof loadManagerRequestsV2 === 'function') loadManagerRequestsV2();
+    }
     function omSaveDetails() {
         const data = getData(), r = omReq(); if (!r) return;
         r.eta = $id('omEta').value || '';
