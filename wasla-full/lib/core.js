@@ -225,6 +225,14 @@ function viewFor(db, user, ver) {
         out.users = db.users.filter(u => u.role !== 'manager').map(pubUser); out.requests = db.requests.map(hideMgr);
         out.chats = db.chats.filter(c => c.sender === me || c.receiver === me); out.ratings = db.ratings;
         out.parts = db.parts.map(({ cost, ...p }) => p); { const { expenses, shifts, ...pubS } = s; out.settings = pubS; }
+    } else if (role === 'govviewer') {
+        const govUsers = db.users.filter(isGovClient);
+        const govNames = new Set(govUsers.map(u => u.username));
+        out.users = govUsers.map(pubUser);
+        out.requests = db.requests.filter(r => govNames.has(r.clientName)).map(r => {
+            const { internalNotes, payments, partsUsed, price, deposit, ...rest } = r;
+            return rest;
+        });
     } else if (role === 'technician') {
         out.users = db.users.filter(u => u.role === 'cashier' || u.username === me).map(u => ({ ...pubUser(u), phone: u === user ? u.phone || '' : '' }));
         out.requests = db.requests.filter(r => r.sentToTech === me).map(r => { const { price, deposit, payments, techHandedBackAt, techHandedBackTs, ...rest } = r; return rest; });
@@ -275,13 +283,34 @@ async function applyOps(db, user, rawOps, rejected, ctx) {
     if (ops.users && Array.isArray(ops.users.upsert)) ops.users.upsert = ops.users.upsert.filter(x => x && SAFE_USERNAME.test(String(x.username || '')));
     const me = user.username, role = user.role, isMgr = role === 'manager', isStaff = isMgr || role === 'cashier';
     const rej = w => rejected.push(w);
+    if (role === 'govviewer') {
+        for (const key of Object.keys(ops)) {
+            if (key !== 'requests') { rej('هذا الحساب مخصص لعرض وإضافة الأجهزة الحكومية فقط'); delete ops[key]; }
+        }
+    }
 
     const R = ops.requests || {};
     for (const patch of (R.upsert || [])) {
         if (!patch || !patch.id) continue;
         const ex = db.requests.find(r => r.id === patch.id);
         if (!ex) {
-            if (role === 'client') {
+            if (role === 'govviewer') {
+                const targetName = str(patch.clientName, 40).trim();
+                const target = db.users.find(u => u.username === targetName && isGovClient(u));
+                if (!target) { rej('يمكن إضافة أجهزة للحسابات الحكومية فقط'); continue; }
+                const rec = {
+                    id: str(patch.id, 40), status: 'pending', progress: 0,
+                    deviceType: str(patch.deviceType, 100), category: str(patch.category, 80),
+                    serialNumber: str(patch.serialNumber, 100), priority: ['normal','medium','urgent'].includes(patch.priority) ? patch.priority : 'normal',
+                    deviceDetails: str(patch.deviceDetails, 1000), images: await extractImages(Array.isArray(patch.images) ? patch.images : []),
+                    clientName: target.username, createdBy: me, clientPhone: target.phone || '', clientEmail: target.email || '',
+                    unitName: target.isDept ? str(patch.unitName, 80).trim() : '',
+                    createdAt: str(patch.createdAt, 60) || new Date().toLocaleString('ar-EG'),
+                    createdAtTs: Number(patch.createdAtTs) || Date.now(), receivedByCashierAt: '', acceptedByManagerAt: '', completedAt: '', history: []
+                };
+                if (!rec.serialNumber) { rej('طلب بدون سيريال'); continue; }
+                db.requests.push(rec);
+            } else if (role === 'client') {
                 const rec = { status: 'pending', progress: 0, deviceType: '', receivedByCashierAt: '', acceptedByManagerAt: '', completedAt: '', history: [] };
                 for (const k of CLIENT_CREATE) if (patch[k] !== undefined) rec[k] = patch[k];
                 rec.clientName = me; rec.createdBy = me; rec.clientPhone = user.phone || '';
@@ -298,6 +327,7 @@ async function applyOps(db, user, rawOps, rejected, ctx) {
             continue;
         }
         const { id, __del, ...fields } = patch;
+        if (role === 'govviewer') { rej('حساب العرض الحكومي لا يمكنه تعديل الأجهزة أو حذفها'); continue; }
         if (isStaff) {
             for (const [k, v] of Object.entries(fields)) {
                 if (k === 'createdBy') continue;
@@ -375,7 +405,7 @@ async function applyOps(db, user, rawOps, rejected, ctx) {
             if (phone && db.users.some(u => u.phone === phone && u !== ex)) { rej(`الرقم ${phone} مستخدم`); continue; }
             if (!ex) {
                 if (!patch.password || String(patch.password).length < 4) { rej('كلمة مرور قصيرة'); continue; }
-                if (!['client', 'cashier', 'technician', 'manager'].includes(patch.role)) { rej('دور غير صالح'); continue; }
+                if (!['client', 'cashier', 'technician', 'manager', 'govviewer'].includes(patch.role)) { rej('دور غير صالح'); continue; }
                 db.users.push({ username: str(patch.username, 40), passwordHash: hashPassword(patch.password), role: patch.role, phone: phone || '', email: str(patch.email, 100), mustChange: true, ...(patch.role === 'client' && patch.clientType === 'gov' ? { clientType: 'gov', ...(patch.isDept ? { isDept: true, unitName: str(patch.unitName, 80).trim() } : (findDept(db, patch.parent) ? { parent: patch.parent } : {})) } : {}) });
             } else {
                 if (patch.unitName !== undefined && isGovClient(ex) && ex.isDept) ex.unitName = str(patch.unitName, 80).trim();
@@ -391,7 +421,7 @@ async function applyOps(db, user, rawOps, rejected, ctx) {
                         if (findDept(db, patch.parent) && patch.parent !== ex.username) ex.parent = patch.parent; else delete ex.parent;
                     }
                 }
-                if (patch.role && ex.username !== 'manager' && ['client', 'cashier', 'technician', 'manager'].includes(patch.role)) ex.role = patch.role;
+                if (patch.role && ex.username !== 'manager' && ['client', 'cashier', 'technician', 'manager', 'govviewer'].includes(patch.role)) ex.role = patch.role;
                 if (patch.password) {
                     if (String(patch.password).length < 4) { rej('كلمة مرور قصيرة'); continue; }
                     ex.passwordHash = hashPassword(patch.password); ex.mustChange = ex.username !== me;
