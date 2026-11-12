@@ -299,7 +299,15 @@ async function applyOps(db, user, rawOps, rejected, ctx) {
         }
         const { id, __del, ...fields } = patch;
         if (isStaff) {
-            for (const [k, v] of Object.entries(fields)) { if (k === 'clientName' || k === 'createdBy') continue; setField(ex, k, v); }
+            for (const [k, v] of Object.entries(fields)) {
+                if (k === 'createdBy') continue;
+                if (k === 'clientName') {
+                    // المدير بس يقدر ينقل الطلب لعميل تاني (لازم يكون حساب عميل موجود)
+                    if (!isMgr || v === ex.clientName) continue;
+                    if (!db.users.some(u => u.role === 'client' && u.username === v)) { rej('العميل غير موجود: ' + str(v, 40)); continue; }
+                }
+                setField(ex, k, v);
+            }
             for (const k of (__del || [])) if (k !== 'id' && k !== 'clientName' && k !== 'createdBy') delete ex[k];
         } else if (role === 'technician') {
             if (ex.sentToTech !== me) { rej('جهاز غير مرسل إليك'); continue; }
