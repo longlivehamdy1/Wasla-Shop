@@ -5797,6 +5797,17 @@ ${list(notes)}
             <button class="btn btn-success" onclick="omSaveType()">💾 حفظ نوع الجهاز</button>`);
         }
 
+        if (role === 'cashier') {
+            h += omSec('✏️ تفاصيل الجهاز', `
+            <label class="om-l">تفاصيل الجهاز / وصف العطل</label><textarea id="omDetails" rows="3">${esc(r.deviceDetails || '')}</textarea>
+            <label class="om-l">مشتملات الجهاز</label><textarea id="omAccessories" rows="2" placeholder="مثال: الجهاز + شاحن + كابل">${esc(r.accessories || '')}</textarea>
+            <label class="om-l">السيريال نمبر</label><input type="text" id="omSerial" value="${esc(r.serialNumber || '')}">
+            <label class="om-l">تليفون العميل</label><input type="text" id="omPhone" value="${esc(r.clientPhone || '')}">
+            <label class="om-l">الأولوية</label>
+            <select id="omPriority"><option value="normal"${(r.priority || 'normal') === 'normal' ? ' selected' : ''}>🟢 عادي</option><option value="medium"${r.priority === 'medium' ? ' selected' : ''}>🟡 متوسط</option><option value="urgent"${r.priority === 'urgent' ? ' selected' : ''}>🔴 عاجل</option></select>
+            <button class="btn btn-success" onclick="omSaveInfo()">💾 حفظ التفاصيل</button>`);
+        }
+
         h += omSec('📅 الموعد المتوقع' + (money$ ? ' والضمان' : ''), `
             <label class="om-l">تاريخ التسليم المتوقع</label><input type="date" id="omEta" value="${esc(r.eta || '')}">
             ${money$ ? `<label class="om-l">مدة الضمان بالأيام (من تاريخ التسليم)</label><input type="number" id="omWarranty" min="0" value="${warrantyDaysOf(r)}">` : ''}
@@ -5930,6 +5941,25 @@ ${list(notes)}
         renderOrderModal();
         if (currentUser.role === 'cashier') { if (typeof loadCashierRequests === 'function') loadCashierRequests(); }
         else if (typeof loadManagerRequestsV2 === 'function') loadManagerRequestsV2();
+    }
+    function omSaveInfo() {
+        if (!currentUser || currentUser.role !== 'cashier') return;
+        const data = getData(), r = omReq(); if (!r) return;
+        const serial = $id('omSerial').value.trim();
+        if (!serial) { showToast('⚠️ السيريال مطلوب', 'warning'); return; }
+        const changes = [];
+        const set = (k, v, label) => { if ((r[k] == null ? '' : r[k]) !== v) { r[k] = v; changes.push(label); } };
+        set('deviceDetails', $id('omDetails').value.trim(), 'التفاصيل');
+        set('accessories', $id('omAccessories').value.trim(), 'المشتملات');
+        set('serialNumber', serial, 'السيريال');
+        set('clientPhone', $id('omPhone').value.trim(), 'التليفون');
+        set('priority', $id('omPriority').value, 'الأولوية');
+        if (!changes.length) { showToast('لا يوجد تغيير', 'info'); return; }
+        saveData(data);
+        addLog(`عدّل الكاشير ${currentUser.username} تفاصيل الطلب ${r.id} (${changes.join('، ')})`);
+        showToast('✅ تم حفظ التفاصيل', 'success');
+        renderOrderModal();
+        if (typeof loadCashierRequests === 'function') loadCashierRequests();
     }
     function omSaveDetails() {
         const data = getData(), r = omReq(); if (!r) return;
