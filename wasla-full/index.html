@@ -2274,6 +2274,16 @@ body{background:radial-gradient(ellipse at 8% 8%,rgba(32,129,185,.17),transparen
             <div id="technicianRequestsContainer"></div>
         </div>
 
+        <!-- ===== لوحة مسؤول الحسابات الحكومية ===== -->
+        <div class="panel" id="govViewerPanel">
+            <h2 style="color:#0ea5e9;">🏛️ لوحة الأجهزة الحكومية</h2>
+            <div class="cards">
+                <div class="card"><div class="icon">📦</div><h3>إضافة جهاز لحساب حكومي</h3><p style="color:#8892b0;font-size:12px;">يمكنك تسجيل جهاز جديد فقط دون تعديل أو حذف الطلبات الحالية</p><button class="btn" onclick="openModal('requestModal')">➕ إضافة جهاز</button></div>
+                <div class="card"><div class="icon">📋</div><h3>الأجهزة الحكومية</h3><p style="color:#8892b0;font-size:12px;">عرض جميع الأجهزة المسجلة على الحسابات الحكومية</p><button class="btn" onclick="loadGovernmentViewerRequests()">🔄 تحديث القائمة</button></div>
+            </div>
+            <div id="govViewerRequestsContainer"></div>
+        </div>
+
         <!-- ===== لوحة المدير ===== -->
         <div class="panel" id="managerPanel">
             <h2 class="wasla-manager-title" style="color:#2ecc71;">👨‍💼 لوحة المدير</h2>
@@ -2349,6 +2359,7 @@ body{background:radial-gradient(ellipse at 8% 8%,rgba(32,129,185,.17),transparen
                             <option value="cashier">💰 كاشير</option>
                             <option value="technician">🔧 فني صيانة</option>
                             <option value="manager">👨‍💼 مدير</option>
+                            <option value="govviewer">🏛️ مسؤول عرض وإضافة الأجهزة الحكومية</option>
                         </select>
                         <select id="mNewUserClientType" title="نوع العميل" onchange="refreshNewUserDeptUI()"><option value="">👤 عميل عادي</option><option value="gov">🏛️ عميل حكومي</option><option value="dept">🏢 حساب إدارة حكومي</option></select>
                         <input type="tel" id="mNewUserPhone" placeholder="📱 رقم الموبايل *" required>
@@ -2535,6 +2546,7 @@ body{background:radial-gradient(ellipse at 8% 8%,rgba(32,129,185,.17),transparen
         <label style="color:#8892b0;font-size:14px;margin-top:10px;display:block;">نوع الجهاز / الخدمة:</label>
         <select id="reqDeviceType"></select>
         <input type="text" id="reqClientName" placeholder="اسم العميل">
+        <select id="reqGovClientName" style="display:none;" onchange="updateGovRequestUnitField()"></select>
         <div id="reqUnitNameWrap" style="display:none;"><label for="reqUnitName" style="color:#8892b0;font-size:14px;margin-top:10px;display:block;">اسم الوحدة / القسم التابع للجهاز</label><input type="text" id="reqUnitName" maxlength="80" placeholder="مثال: وحدة الصيانة"></div>
         <input type="text" id="reqAddress" placeholder="📍 العنوان بالتفصيل (المنطقة - الشارع - الدور)" style="display:none;">
         <textarea id="reqDetails" placeholder="وصف المشكلة أو الطلب"></textarea>
@@ -2958,7 +2970,7 @@ body{background:radial-gradient(ellipse at 8% 8%,rgba(32,129,185,.17),transparen
         const pb = document.getElementById('pwBtn'); if (pb) pb.style.display = 'none';
         document.getElementById('chatFloatBtn').style.display = 'none';
         document.getElementById('userDisplay').innerHTML = '';
-        ['clientPanel', 'cashierPanel', 'technicianPanel', 'managerPanel'].forEach(id => document.getElementById(id).classList.remove('active'));
+        ['clientPanel', 'cashierPanel', 'technicianPanel', 'managerPanel', 'govViewerPanel'].forEach(id => document.getElementById(id).classList.remove('active'));
         document.querySelectorAll('.modal.active').forEach(m => m.classList.remove('active'));
         appData = null; baseline = null; lastRaw = '';
         stopCamera();
@@ -2973,6 +2985,7 @@ body{background:radial-gradient(ellipse at 8% 8%,rgba(32,129,185,.17),transparen
         if (currentUser.role === 'client') loadClientRequests();
         else if (currentUser.role === 'cashier') loadCashierRequests();
         else if (currentUser.role === 'technician') loadTechnicianRequests();
+        else if (currentUser.role === 'govviewer') loadGovernmentViewerRequests();
         else if (currentUser.role === 'manager') {
             const activeTab = document.querySelector('.tab-btn.active');
             if (activeTab) switchManagerTab(activeTab.dataset.tab);
@@ -3786,8 +3799,8 @@ body{background:radial-gradient(ellipse at 8% 8%,rgba(32,129,185,.17),transparen
         const pb = document.getElementById('pwBtn'); if (pb) pb.style.display = 'inline-block';
         document.getElementById('chatFloatBtn').style.display = 'flex';
 
-        const roleNames = { client: 'عميل', cashier: 'كاشير', technician: 'فني صيانة', manager: 'مدير' };
-        const badgeClass = { client: 'badge-client', cashier: 'badge-cashier', technician: 'badge-technician', manager: 'badge-manager' };
+        const roleNames = { client: 'عميل', cashier: 'كاشير', technician: 'فني صيانة', manager: 'مدير', govviewer: 'مسؤول حكومي' };
+        const badgeClass = { client: 'badge-client', cashier: 'badge-cashier', technician: 'badge-technician', manager: 'badge-manager', govviewer: 'badge-manager' };
         let contactInfo = '';
         if (user.phone) contactInfo += `📱 ${user.phone} `;
         if (user.email) contactInfo += `📧 ${user.email}`;
@@ -3802,9 +3815,11 @@ body{background:radial-gradient(ellipse at 8% 8%,rgba(32,129,185,.17),transparen
         document.getElementById('cashierPanel').classList.toggle('active', user.role === 'cashier');
         document.getElementById('technicianPanel').classList.toggle('active', user.role === 'technician');
         document.getElementById('managerPanel').classList.toggle('active', user.role === 'manager');
+        document.getElementById('govViewerPanel').classList.toggle('active', user.role === 'govviewer');
+        document.getElementById('chatFloatBtn').style.display = user.role === 'govviewer' ? 'none' : 'flex';
 
         // العميل يشوف طلباته بس، مايشوفش إحصائيات إجمالية عن كل طلبات المحل
-        document.getElementById('mainStats').style.display = (user.role === 'client' || user.role === 'technician') ? 'none' : '';
+        document.getElementById('mainStats').style.display = (user.role === 'client' || user.role === 'technician' || user.role === 'govviewer') ? 'none' : '';
 
         if ('Notification' in window && Notification.permission === 'granted') notificationPermission = true;
 
@@ -3815,6 +3830,8 @@ body{background:radial-gradient(ellipse at 8% 8%,rgba(32,129,185,.17),transparen
             loadCashierRequests();
         } else if (user.role === 'technician') {
             loadTechnicianRequests();
+        } else if (user.role === 'govviewer') {
+            loadGovernmentViewerRequests();
         } else if (user.role === 'manager') {
             loadManagerRequestsV2();
             updateManagerStats();
@@ -4012,12 +4029,19 @@ body{background:radial-gradient(ellipse at 8% 8%,rgba(32,129,185,.17),transparen
             document.getElementById('qrCodeContainer').style.display = 'none';
         }
         if (id === 'requestModal') {
+            const govSelect = document.getElementById('reqGovClientName');
+            const clientInput = document.getElementById('reqClientName');
+            if (currentUser && currentUser.role === 'govviewer') {
+                const govUsers = getData().users.filter(u => u.role === 'client' && u.clientType === 'gov');
+                govSelect.innerHTML = '<option value="">اختر الحساب الحكومي</option>' + govUsers.map(u => `<option value="${esc(u.username)}">${esc(u.username)}${u.isDept ? ' — إدارة' : ''}</option>`).join('');
+                govSelect.style.display = ''; clientInput.style.display = 'none'; clientInput.value = '';
+            } else { govSelect.style.display = 'none'; clientInput.style.display = ''; clientInput.readOnly = !!(currentUser && currentUser.role === 'client'); }
             if (currentUser && currentUser.role === 'client') {
                 const nm = document.getElementById('reqClientName');
                 nm.value = currentUser.username; nm.readOnly = true;
             }
             const unitWrap = document.getElementById('reqUnitNameWrap');
-            if (unitWrap) unitWrap.style.display = currentUser && currentUser.isDept ? '' : 'none';
+            if (unitWrap) { const chosen = currentUser && currentUser.role === 'govviewer' ? getData().users.find(u => u.username === document.getElementById('reqGovClientName').value) : currentUser; unitWrap.style.display = chosen && chosen.isDept ? '' : 'none'; }
             const unitInput = document.getElementById('reqUnitName');
             if (unitInput) unitInput.value = '';
             uploadedImages = [];
@@ -4183,6 +4207,29 @@ body{background:radial-gradient(ellipse at 8% 8%,rgba(32,129,185,.17),transparen
         }
     }
 
+    function loadGovernmentViewerRequests() {
+        if (!currentUser || currentUser.role !== 'govviewer') return;
+        const data = getData();
+        const container = document.getElementById('govViewerRequestsContainer');
+        if (!container) return;
+        container.innerHTML = `
+            <div class="search-box"><input type="text" id="govViewerSearch" placeholder="🔍 بحث باسم الحساب أو السيريال أو رقم الوصل..." oninput="renderGovernmentViewerRequests()">
+                <select id="govViewerStatus" onchange="renderGovernmentViewerRequests()"><option value="all">كل الحالات</option><option value="pending">قيد الانتظار</option><option value="cashier_received">استلمه الكاشير</option><option value="manager_accepted">في المخزن</option><option value="ready_for_pickup">جاهز للاستلام</option><option value="picked_up">تم التسليم</option></select></div>
+            <div id="govViewerRequestsTable"></div>`;
+        renderGovernmentViewerRequests();
+    }
+    function renderGovernmentViewerRequests() {
+        if (!currentUser || currentUser.role !== 'govviewer') return;
+        const data = getData();
+        const q = (document.getElementById('govViewerSearch')?.value || '').toLowerCase();
+        const st = document.getElementById('govViewerStatus')?.value || 'all';
+        let rows = data.requests.filter(r => {
+            const hit = !q || [r.clientName, r.serialNumber, r.id, r.deviceType, r.unitName].some(v => String(v || '').toLowerCase().includes(q));
+            return hit && (st === 'all' || r.status === st);
+        });
+        renderRequestsTable(rows, 'govViewerRequestsTable', 'govviewer');
+    }
+
     function loadManagerRequestsV2() {
         const data = getData();
         const container = document.getElementById('managerRequestsContainer');
@@ -4282,8 +4329,8 @@ body{background:radial-gradient(ellipse at 8% 8%,rgba(32,129,185,.17),transparen
             container.innerHTML = '<div class="empty-state">🚫 لا يوجد مستخدمين</div>';
             return;
         }
-        const roleNames = { client: 'عميل', cashier: 'كاشير', technician: 'فني صيانة', manager: 'مدير' };
-        const roleColors = { client: '#3498db', cashier: '#f39c12', technician: '#9b59b6', manager: '#2ecc71' };
+        const roleNames = { client: 'عميل', cashier: 'كاشير', technician: 'فني صيانة', manager: 'مدير', govviewer: 'مسؤول حكومي' };
+        const roleColors = { client: '#3498db', cashier: '#f39c12', technician: '#9b59b6', manager: '#2ecc71', govviewer: '#0ea5e9' };
         let html = '<div class="users-grid">';
         data.users.forEach(u => {
             let contact = '';
@@ -4595,9 +4642,18 @@ body{background:radial-gradient(ellipse at 8% 8%,rgba(32,129,185,.17),transparen
         }
     }
 
+    // تحديث حقل الوحدة عند اختيار الحساب الحكومي
+    function updateGovRequestUnitField() {
+        const name = document.getElementById('reqGovClientName')?.value;
+        const u = getData().users.find(x => x.username === name);
+        const wrap = document.getElementById('reqUnitNameWrap');
+        if (wrap) wrap.style.display = u && u.isDept ? '' : 'none';
+        const input = document.getElementById('reqUnitName'); if (input) input.value = '';
+    }
+
     // ====== دوال العميل ======
     function submitRequest() {
-        const clientName = (currentUser && currentUser.role === 'client') ? currentUser.username : document.getElementById('reqClientName').value.trim();
+        const clientName = (currentUser && currentUser.role === 'client') ? currentUser.username : (currentUser && currentUser.role === 'govviewer' ? document.getElementById('reqGovClientName').value : document.getElementById('reqClientName').value.trim());
         const priority = document.getElementById('reqPriority').value;
         const deviceType = document.getElementById('reqDeviceType').value;
         const category = document.getElementById('reqCategory').value;
@@ -4611,8 +4667,10 @@ body{background:radial-gradient(ellipse at 8% 8%,rgba(32,129,185,.17),transparen
         /* السيريال بيسجله الكاشير وقت الاستلام */
         const serialNumber = isSvc ? 'SVC-' + Date.now().toString(36).toUpperCase().slice(-5) : WPENDING_SN;
         const deviceDetails = [isSvc && addr ? '📍 العنوان: ' + addr : '', desc].filter(Boolean).join('\n');
-        const unitName = currentUser && currentUser.isDept ? document.getElementById('reqUnitName').value.trim().slice(0, 80) : '';
-        if (currentUser && currentUser.isDept && !unitName) { showToast('⚠️ اكتب اسم الوحدة / القسم التابع للجهاز', 'warning'); return; }
+        const selectedGov = currentUser && currentUser.role === 'govviewer' ? getData().users.find(u => u.username === clientName && u.role === 'client' && u.clientType === 'gov') : null;
+        const unitName = currentUser && currentUser.role === 'govviewer' && selectedGov && selectedGov.isDept ? document.getElementById('reqUnitName').value.trim().slice(0, 80) : (currentUser && currentUser.isDept ? document.getElementById('reqUnitName').value.trim().slice(0, 80) : '');
+        if (((currentUser && currentUser.isDept) || (currentUser && currentUser.role === 'govviewer' && selectedGov && selectedGov.isDept)) && !unitName) { showToast('⚠️ اكتب اسم الوحدة / القسم التابع للجهاز', 'warning'); return; }
+        if (currentUser && currentUser.role === 'govviewer' && !selectedGov) { showToast('⚠️ اختر حسابًا حكوميًا صحيحًا', 'warning'); return; }
 
         const data = getData();
         const clientUser = data.users.find(u => u.username === clientName);
@@ -4643,14 +4701,15 @@ body{background:radial-gradient(ellipse at 8% 8%,rgba(32,129,185,.17),transparen
 
         showToast(`✅ تم إرسال الطلب بنجاح! المعرف: ${request.id}`, 'success');
         closeModal('requestModal');
-        document.getElementById('reqClientName').value = currentUser.username;
+        document.getElementById('reqClientName').value = currentUser.role === 'client' ? currentUser.username : '';
+        if (document.getElementById('reqGovClientName')) document.getElementById('reqGovClientName').value = '';
         document.getElementById('reqUnitName').value = '';
         resetRequestForm();
         document.getElementById('reqImagesPreview').innerHTML = '';
         uploadedImages = [];
-        loadClientRequests();
+        if (currentUser.role === 'govviewer') loadGovernmentViewerRequests(); else loadClientRequests();
         updateAllStats();
-        addLog(`أضاف ${clientName} طلب جديد (${request.id})`);
+        if (currentUser.role !== 'govviewer') addLog(`أضاف ${clientName} طلب جديد (${request.id})`);
 
         if (data.settings?.emailNotifications?.onCreate && data.settings?.notificationEmail) {
             console.log(`📧 إرسال إيميل: طلب جديد من ${clientName}`);
@@ -8119,6 +8178,7 @@ function whDoMove() {
   /* كروت وإحصائيات بشكل تطبيق */
   body.m-app.m-on #mainStats { display: flex !important; overflow-x: auto; gap: 10px !important; padding: 4px 2px 10px; margin: 0 -14px 6px !important; padding-inline: 14px; scroll-snap-type: x proximity; scrollbar-width: none; }
   body.m-app.m-on #mainStats::-webkit-scrollbar { display: none; }
+  body.m-app.m-on[data-mrole="govviewer"] #mainStats { display: none !important; }
   body.m-app.m-on #mainStats .stat-card { flex: 0 0 132px; scroll-snap-align: start; border-radius: 20px !important; padding: 14px 10px !important; }
   body.m-app.m-on .cards { grid-template-columns: repeat(2, 1fr) !important; gap: 10px !important; }
   body.m-app.m-on .card { border-radius: 20px !important; padding: 16px 10px !important; display: flex; flex-direction: column; align-items: center; justify-content: space-between; }
@@ -8178,7 +8238,7 @@ function whDoMove() {
   function svg(n) { return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' + ICON[n] + '</svg>'; }
   function call(fn) { try { var a = [].slice.call(arguments, 1); if (typeof window[fn] === 'function') return window[fn].apply(null, a); } catch (e) {} }
   function role() {
-    var m = { client: 'clientPanel', cashier: 'cashierPanel', technician: 'technicianPanel', manager: 'managerPanel' };
+    var m = { client: 'clientPanel', cashier: 'cashierPanel', technician: 'technicianPanel', manager: 'managerPanel', govviewer: 'govViewerPanel' };
     for (var r in m) { var p = $(m[r]); if (p && p.classList.contains('active')) return r; }
     return null;
   }
@@ -8190,8 +8250,8 @@ function whDoMove() {
   }
   function top() { window.scrollTo({ top: 0, behavior: 'smooth' }); }
   function buzz() { try { navigator.vibrate && navigator.vibrate(8); } catch (e) {} }
-  var TITLES = { client: 'لوحة العميل', cashier: 'لوحة الكاشير', technician: 'لوحة الفني', manager: 'لوحة المدير' };
-  var ROLE_AR = { client: 'عميل', cashier: 'كاشير', technician: 'فني صيانة', manager: 'مدير' };
+  var TITLES = { client: 'لوحة العميل', cashier: 'لوحة الكاشير', technician: 'لوحة الفني', manager: 'لوحة المدير', govviewer: 'الأجهزة الحكومية' };
+  var ROLE_AR = { client: 'عميل', cashier: 'كاشير', technician: 'فني صيانة', manager: 'مدير', govviewer: 'مسؤول حكومي' };
   var MTABS = { 'manager-dashboard': 'لوحة التحكم', 'manager-requests': 'الطلبات', 'manager-users': 'المستخدمين', 'manager-chats': 'المحادثات', 'manager-ratings': 'التقييمات', 'manager-logs': 'السجل', 'manager-alerts': 'التنبيهات', 'manager-reports': 'التقارير', 'manager-parts': 'قطع الغيار', 'manager-warehouses': 'المخازن', 'manager-settings': 'الإعدادات' };
 
   function items(r) {
@@ -8202,6 +8262,12 @@ function whDoMove() {
       { id: 'manager-users', i: 'users', l: 'المستخدمين', f: T('manager-users') },
       { id: 'manager-alerts', i: 'bell', l: 'التنبيهات', f: T('manager-alerts'), bd: 'mAlertsBadge' },
       { id: 'more', i: 'more', l: 'المزيد', f: openSheet }
+    ];
+    if (r === 'govviewer') return [
+      { id: 'home', i: 'home', l: 'الرئيسية', f: top },
+      { id: 'gov-requests', i: 'list', l: 'الأجهزة', f: function () { call('loadGovernmentViewerRequests'); go('govViewerRequestsContainer'); } },
+      { id: 'fab', fab: 1, i: 'plus', l: 'إضافة جهاز', f: function () { call('openModal', 'requestModal'); } },
+      { id: 'more', i: 'user', l: 'حسابي', f: openSheet }
     ];
     if (r === 'client') return [
       { id: 'home', i: 'home', l: 'الرئيسية', f: top },
@@ -8318,7 +8384,7 @@ function whDoMove() {
     else { curRole = null; closeSheet(); }
   }
   new MutationObserver(refresh).observe(document.body, { attributes: true, attributeFilter: ['class'] });
-  ['clientPanel', 'cashierPanel', 'technicianPanel', 'managerPanel'].forEach(function (id) { var p = $(id); if (p) new MutationObserver(refresh).observe(p, { attributes: true, attributeFilter: ['class'] }); });
+  ['clientPanel', 'cashierPanel', 'technicianPanel', 'managerPanel', 'govViewerPanel'].forEach(function (id) { var p = $(id); if (p) new MutationObserver(refresh).observe(p, { attributes: true, attributeFilter: ['class'] }); });
   var mt = document.querySelector('.manager-tabs'); if (mt) new MutationObserver(sync).observe(mt, { attributes: true, subtree: true, attributeFilter: ['class'] });
   (mq.addEventListener ? mq.addEventListener('change', refresh) : mq.addListener(refresh));
   setInterval(function () { if (curRole) sync(); }, 2000);
