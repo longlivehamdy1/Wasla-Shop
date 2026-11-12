@@ -3997,7 +3997,7 @@ body{background:radial-gradient(ellipse at 8% 8%,rgba(32,129,185,.17),transparen
             document.getElementById('reqImagesPreview').innerHTML = '';
             if (!document.getElementById('reqCategory').options.length) resetRequestForm();
         }
-        if (id === 'receiveModal') setTimeout(recPrefill, 0);
+        if (id === 'receiveModal') recReset();
         if (id === 'chatModal') {
             loadChatInterface();
             if (currentUser) markAsRead(currentUser.username);
@@ -4717,31 +4717,6 @@ body{background:radial-gradient(ellipse at 8% 8%,rgba(32,129,185,.17),transparen
     }
 
     // ====== دوال الكاشير ======
-    // استلام سريع من الجدول: اكتب السيريال وأكّد على طول من غير ما تفتح نافذة الاستلام
-    function quickReceive(id) {
-        const data = getData();
-        const request = data.requests.find(r => r.id === id);
-        if (!request) { showToast('❌ لم يتم العثور على الطلب', 'error'); return; }
-        if (request.status !== 'pending') { showToast('❌ هذا الطلب تم استلامه بالفعل', 'error'); refreshCurrentView(); return; }
-        const el = document.getElementById('qrs_' + id);
-        const serial = ((el && el.value) || '').trim();
-        const isSvc = !!(request.category && WCAT[request.category] && WCAT[request.category].service);
-        if (!isSvc && !serial && wIsPlaceholderSN(request.serialNumber)) {
-            showToast('⚠️ اكتب السيريال نمبر الأول', 'warning');
-            if (el) el.focus();
-            return;
-        }
-        if (serial) request.serialNumber = serial;
-        request.status = 'cashier_received';
-        request.receivedByCashierAt = new Date().toLocaleString('ar-EG');
-        request.receivedTs = Date.now();
-        saveData(data);
-        showToast('✅ تم استلام الجهاز', 'success');
-        addLog(`استلم ${currentUser.username} جهاز ${request.clientName} (${request.serialNumber})`);
-        try { loadCashierRequests(); } catch (e) {}
-        try { updateAllStats(); } catch (e) {}
-        try { refreshCurrentView(); } catch (e) {}
-    }
     function submitReceive() {
         const requestId = document.getElementById('recRequestId').value.trim();
         const deviceType = document.getElementById('recDeviceType').value;
@@ -4784,6 +4759,7 @@ body{background:radial-gradient(ellipse at 8% 8%,rgba(32,129,185,.17),transparen
         document.getElementById('recSerial').value = '';
         document.getElementById('recDeviceDetails').value = '';
         document.getElementById('recAccessories').value = '';
+        recReset();
         loadCashierRequests();
         updateAllStats();
         addLog(`استلم ${currentUser.username} جهاز ${request.clientName} (${request.serialNumber})`);
@@ -5745,15 +5721,6 @@ ${list(notes)}
     // ---------------- أزرار الطلب للكاشير/المدير/الفني ----------------
     function cashierActions(r) {
         const btns = [];
-        if (r.status === 'pending') {
-            const isSvc = !!(r.category && WCAT[r.category] && WCAT[r.category].service);
-            const sn = wIsPlaceholderSN(r.serialNumber) ? '' : r.serialNumber;
-            btns.push(`<div class="qr-box" style="display:flex;gap:4px;align-items:center;">
-                <input type="text" id="qrs_${esc(r.id)}" value="${esc(sn)}" placeholder="${isSvc ? 'السيريال (اختياري)' : 'اكتب السيريال'}" autocomplete="off"
-                    style="width:130px;min-width:0;padding:6px 8px;font-size:13px;margin:0;" onkeydown="if(event.key==='Enter'){event.preventDefault();quickReceive('${esc(r.id)}');}">
-                <button class="table-action-btn" style="white-space:nowrap;" onclick="quickReceive('${esc(r.id)}')">✅ استلام</button>
-            </div>`);
-        }
         const inShop = r.status === 'cashier_received' || r.status === 'manager_accepted';
         if (inShop && r.techStatus !== 'received') {
             btns.push(`<button class="table-action-btn" onclick="openSendToTech('${r.id}')">${r.techStatus === 'sent' ? '🔁 إعادة الإرسال للفني' : '📤 إرسال للفني'}</button>`);
@@ -5794,21 +5761,6 @@ ${list(notes)}
         if (!r || !currentUser) { body.innerHTML = '<div class="empty-state">الطلب غير موجود</div>'; return; }
         const role = currentUser.role, money$ = role === 'cashier' || role === 'manager';
         let h = `<h2>⚙️ إدارة الطلب</h2><div class="ct-sub" style="margin-bottom:8px;">${esc(r.id)} • ${esc(requestAccountDisplayName(r))} • ${esc(r.deviceType || '-')} • ${esc(r.serialNumber)}</div>`;
-
-        if (role === 'manager' || role === 'cashier') {
-            const cur = r.deviceType || '';
-            let known = false;
-            const opts = WCAT_ORDER.map(k => {
-                const c = WCAT[k];
-                return `<optgroup label="${c.icon} ${c.title}">${c.items.map(it => { if (it[0] === cur) known = true; return `<option value="${esc(it[0])}"${it[0] === cur ? ' selected' : ''}>${it[1]} ${esc(it[2])}</option>`; }).join('')}</optgroup>`;
-            }).join('');
-            const other = `<option value="أخرى"${cur === 'أخرى' ? ' selected' : ''}>🔧 أخرى</option>`;
-            const curOpt = (!known && cur && cur !== 'أخرى') ? `<option value="${esc(cur)}" selected>${esc(cur)} (الحالي)</option>` : '';
-            h += omSec('🔄 نوع الجهاز / الخدمة', `
-                <label class="om-l">النوع الحالي: <b>${esc(cur || 'غير محدد')}</b></label>
-                <select id="omDeviceType">${curOpt}${opts}${other}</select>
-                <button class="btn btn-success" onclick="omSaveDeviceType()">💾 حفظ نوع الجهاز</button>`);
-        }
 
         h += omSec('📅 الموعد المتوقع' + (money$ ? ' والضمان' : ''), `
             <label class="om-l">تاريخ التسليم المتوقع</label><input type="date" id="omEta" value="${esc(r.eta || '')}">
@@ -5855,21 +5807,6 @@ ${list(notes)}
         body.innerHTML = h;
     }
     function omReq() { return getData().requests.find(x => x.id === orderModalId); }
-    function omSaveDeviceType() {
-        const data = getData(), r = omReq(); if (!r || !currentUser || !['manager', 'cashier'].includes(currentUser.role)) return;
-        const el = $id('omDeviceType'); if (!el) return;
-        const val = el.value;
-        if (!val) { showToast('⚠️ اختر نوع الجهاز', 'warning'); return; }
-        const old = r.deviceType || '';
-        if (val === old) { showToast('النوع نفسه بدون تغيير', 'info'); return; }
-        r.deviceType = val;
-        const catKey = WCAT_ORDER.find(k => WCAT[k].items.some(it => it[0] === val));
-        if (catKey) r.category = catKey;
-        saveData(data); showToast('✅ تم تغيير نوع الجهاز', 'success');
-        addLog(`غيّر ${currentUser.username} نوع جهاز الطلب ${r.id} من "${old}" إلى "${val}"`);
-        renderOrderModal();
-        if (typeof refreshCurrentView === 'function') try { refreshCurrentView(); } catch (e) {}
-    }
     function omSaveDetails() {
         const data = getData(), r = omReq(); if (!r) return;
         r.eta = $id('omEta').value || '';
@@ -6529,7 +6466,8 @@ window.holdConfirm = function (message, opts) {
 
     /* 1) سكرول ناعم للصفحة، والمودالات والقوائم الداخلية بتسكرول عادي */
     var lenis = null;
-    if (window.Lenis && !window.matchMedia('(pointer: coarse)').matches) {
+    var USE_SMOOTH_SCROLL = false; // السكرول الناعم (Lenis) بيخلي عجلة الماوس تقيلة؛ اتقفل. خليه true لو عايزه تاني
+    if (window.Lenis && USE_SMOOTH_SCROLL) {
         lenis = new Lenis({
             lerp: 0.1,
             allowNestedScroll: true,
@@ -7325,6 +7263,17 @@ window.holdConfirm = function (message, opts) {
 </script>
 
 <script>
+/* ===== أداء: بنوقّف أنيميشن الكانفاس الخلفي وقت السكرول (backdrop-filter فوقه كان بيتعاد حسابه كل فريم) ===== */
+(function () {
+    var t = 0;
+    window.__wScrolling = false;
+    function on() { window.__wScrolling = true; clearTimeout(t); t = setTimeout(function () { window.__wScrolling = false; }, 180); }
+    addEventListener('scroll', on, { passive: true, capture: true });
+    addEventListener('wheel', on, { passive: true });
+    addEventListener('touchmove', on, { passive: true });
+})();
+</script>
+<script>
 /* ===== Wasla v6: حركات اللوحة (نفس روح اللوجن). آمنة: لو GSAP ماتحملش بتتجاهل ===== */
 (function () {
     var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -7522,15 +7471,27 @@ function resetRequestForm(){
   cs.value='electronics'; fillDevices('electronics');
   ['reqAddress','reqDetails'].forEach(function(i){var e=document.getElementById(i); if(e) e.value='';});
 }
+var recFoundId='';
+function recReset(){
+  ['recRequestId','recSerial','recDeviceDetails','recAccessories'].forEach(function(i){ var e=document.getElementById(i); if(e) e.value=''; });
+  var dt=document.getElementById('recDeviceType'); if(dt && dt.options.length) dt.selectedIndex=0;
+  recFoundId='';
+}
 function recPrefill(){
   var idEl=document.getElementById('recRequestId'); if(!idEl) return;
-  var id=idEl.value.trim(), sn=document.getElementById('recSerial'), dt=document.getElementById('recDeviceType'), dd=document.getElementById('recDeviceDetails');
-  if(!id) return;
-  var r; try{ r=getData().requests.find(function(x){return x.id===id;}); }catch(e){}
-  if(!r) return;
-  if(sn && !sn.value && !wIsPlaceholderSN(r.serialNumber)) sn.value=r.serialNumber;
-  if(dt && r.deviceType){ for(var i=0;i<dt.options.length;i++){ if(dt.options[i].value===r.deviceType){ dt.value=r.deviceType; break; } } }
-  if(dd && !dd.value && r.deviceDetails) dd.value=r.deviceDetails;
+  var id=idEl.value.trim(), sn=document.getElementById('recSerial'), dt=document.getElementById('recDeviceType'), dd=document.getElementById('recDeviceDetails'), ac=document.getElementById('recAccessories');
+  var r; try{ r=id ? getData().requests.find(function(x){return x.id===id;}) : null; }catch(e){}
+  if(!r){
+    // المعرف مش مطابق لأي طلب: لو كنا مالين بيانات طلب قبله نفضّيها
+    if(recFoundId){ if(sn) sn.value=''; if(dd) dd.value=''; if(ac) ac.value=''; if(dt && dt.options.length) dt.selectedIndex=0; recFoundId=''; }
+    return;
+  }
+  if(r.id===recFoundId) return; // نفس الطلب، متمسحش اللي الكاشير كتبه
+  recFoundId=r.id;
+  if(sn) sn.value = wIsPlaceholderSN(r.serialNumber) ? '' : r.serialNumber;
+  if(dt){ dt.selectedIndex=0; if(r.deviceType){ for(var i=0;i<dt.options.length;i++){ if(dt.options[i].value===r.deviceType){ dt.value=r.deviceType; break; } } } }
+  if(dd) dd.value = r.deviceDetails || '';
+  if(ac) ac.value = r.accessories || '';
 }
 (function(){ var e=document.getElementById('recRequestId'); if(e){ e.addEventListener('input',recPrefill); e.addEventListener('change',recPrefill); } })();
 function startRequest(k,dev){
@@ -8031,41 +7992,6 @@ function whDoMove() {
 @keyframes mUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
 @keyframes mFade { from { opacity: 0; } to { opacity: 1; } }
 </style>
-
-<style id="wasla-scroll-perf">
-/* ===== Scroll performance: يشيل أتقل حاجات في السكرول (blur كتير + خلفية ثابتة + تعارض Lenis) ===== */
-html.lenis, html.lenis body { height: auto; }
-html.lenis { scroll-behavior: auto !important; }
-.lenis.lenis-stopped { overflow: hidden; }
-body, body.login-mode { background-attachment: scroll !important; }
-html.w-light body { background-attachment: scroll !important; }
-/* بلور الكروت واللوحات الكبيرة: بيتعاد رسمه كل فريم فوق الكانفاس المتحرك. بنستبدله بخلفية معتمة أكتر */
-#managerPanel, .wasla-glass-hero, #managerStats .stat-card, #manager-dashboard .chart-box,
-body:not(.login-mode) .manager-tabs, #managerTabs, body:not(.login-mode) .search-box,
-.lg-svc, .lg-track .service-chip, body.login-mode .login-box, .login-box,
-body:not(.login-mode) .stat-card, body:not(.login-mode) .card, body:not(.login-mode) .user-card, body:not(.login-mode) .ct-card {
-  -webkit-backdrop-filter: none !important; backdrop-filter: none !important;
-}
-#managerPanel { background: rgba(12,19,34,.88) !important; }
-#managerStats .stat-card, #manager-dashboard .chart-box { background-color: rgba(18,28,46,.92) !important; }
-.w-aurora i { filter: none !important; will-change: auto; } /* الـ radial-gradient بيعمل نفس الشكل من غير blur(70px) */
-/* الأشرطة الثابتة: بلور أخف */
-body.m-on #mBar, body.m-on #mNav, #wDock { -webkit-backdrop-filter: blur(6px) !important; backdrop-filter: blur(6px) !important; }
-/* بنقلل الشغل وقت السكرول */
-html.w-scrolling .lg-scroll-cue span, html.w-scrolling .lg-title .w > span { animation-play-state: paused !important; }
-</style>
-<script>
-/* علامة "بيتسكرول" بسيطة: الكانفاسات بتوقف رسم وقت السكرول وترجع بعد ما يخلص */
-(function () {
-  var t, root = document.documentElement;
-  addEventListener('scroll', function () {
-    if (!window.__wScrolling) { window.__wScrolling = true; root.classList.add('w-scrolling'); }
-    clearTimeout(t);
-    t = setTimeout(function () { window.__wScrolling = false; root.classList.remove('w-scrolling'); }, 140);
-  }, { passive: true });
-})();
-</script>
-
 
 <div id="mBar" aria-hidden="true">
   <img class="m-logo" id="mLogo" alt="">
