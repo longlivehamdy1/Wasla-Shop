@@ -2607,6 +2607,33 @@ body{background:radial-gradient(ellipse at 8% 8%,rgba(32,129,185,.17),transparen
 </div>
 
 <!-- مودال إدارة الطلب -->
+<!-- مودال التعديل الكامل للطلب (المدير فقط) -->
+<div class="modal" id="mgrEditModal">
+    <div class="modal-content" style="max-width:640px;max-height:88vh;overflow-y:auto;">
+        <span class="close-btn" onclick="closeModal('mgrEditModal')">&times;</span>
+        <h2>✏️ تعديل الطلب (مدير)</h2>
+        <div class="ct-sub" id="mgInfo" style="margin-bottom:8px;"></div>
+        <input type="hidden" id="mgId">
+        <label class="om-l">العميل (صاحب الطلب)</label><select id="mgClient"></select>
+        <label class="om-l">اسم الوحدة (للعميل الحكومي)</label><input type="text" id="mgUnit">
+        <label class="om-l">تليفون العميل</label><input type="text" id="mgPhone">
+        <label class="om-l">نوع الجهاز</label><input type="text" id="mgType">
+        <label class="om-l">السيريال نمبر</label><input type="text" id="mgSerial">
+        <label class="om-l">الأولوية</label>
+        <select id="mgPriority"><option value="normal">🟢 عادي</option><option value="medium">🟡 متوسط</option><option value="urgent">🔴 عاجل</option></select>
+        <label class="om-l">الحالة</label>
+        <select id="mgStatus"><option value="pending">⏳ قيد الانتظار</option><option value="cashier_received">📥 استلمه الكاشير</option><option value="manager_accepted">✅ في المخزن / مع الفني</option><option value="ready_for_pickup">🔔 جاهز للاستلام</option><option value="picked_up">📦 تم التسليم</option></select>
+        <label class="om-l">نسبة التقدم (٠ - ١٠٠)</label><input type="number" id="mgProgress" min="0" max="100">
+        <label class="om-l">الفني المرسل له</label><select id="mgTech"></select>
+        <label class="om-l">تفاصيل الجهاز / وصف العطل</label><textarea id="mgDetails" rows="2"></textarea>
+        <label class="om-l">مشتملات الجهاز</label><textarea id="mgAccessories" rows="2"></textarea>
+        <label class="om-l">التكلفة (جنيه)</label><input type="number" id="mgPrice" min="0">
+        <label class="om-l">تاريخ التسليم المتوقع</label><input type="date" id="mgEta">
+        <label class="om-l">مدة الضمان بالأيام</label><input type="number" id="mgWarranty" min="0">
+        <button class="btn btn-success" onclick="mgrEditSave()">💾 حفظ التعديلات</button>
+    </div>
+</div>
+
 <div class="modal" id="orderModal">
     <div class="modal-content" style="max-width:640px;max-height:88vh;overflow-y:auto;">
         <span class="close-btn" onclick="closeModal('orderModal')">&times;</span>
@@ -5112,7 +5139,7 @@ ${i+1}. المعرف: ${r.id}
                 <td><div style="display:flex;gap:4px;flex-wrap:wrap;justify-content:center;">${imagesHtml}</div></td>
                 ${role === 'manager' ? `<td style="font-size:12px;white-space:nowrap;">${esc(handBackOf(r)) || '-'}</td>` : ''}
                 ${role === 'manager' ? `<td>${ratingHtml}</td>` : ''}
-                ${role === 'manager' ? `<td><div style="display:flex;flex-direction:column;gap:4px;">${cashierActions(r)}<button class="table-action-btn warning" onclick="deleteRequestFull('${esc(r.id)}')">🗑️ حذف الطلب كله</button></div></td>` : ''}
+                ${role === 'manager' ? `<td><div style="display:flex;flex-direction:column;gap:4px;">${cashierActions(r)}<button class="table-action-btn" onclick="openMgrEdit('${r.id}')">✏️ تعديل كامل</button><button class="table-action-btn warning" onclick="deleteRequestFull('${esc(r.id)}')">🗑️ حذف الطلب كله</button></div></td>` : ''}
                 ${role === 'cashier' ? `<td><div style="display:flex;flex-direction:column;gap:4px;">${cashierActions(r)}</div></td>` : ''}
                 ${role === 'client' ? `<td>${r.status === 'ready_for_pickup' ? `<button class="table-action-btn" onclick="confirmClientPickup('${r.id}')">✅ استلمت الجهاز</button>` : (r.status === 'picked_up' ? '<span style="color:#8e44ad;font-size:11px;">📦 تم الاستلام</span>' : '<span style="color:#8892b0;font-size:11px;">-</span>')}</td>` : ''}
             </tr>`;
@@ -5805,6 +5832,79 @@ ${list(notes)}
             <textarea id="omNote" placeholder="اكتب ملاحظة للفريق..."></textarea>
             <button class="btn btn-outline" onclick="omAddNote()">➕ إضافة ملاحظة</button>`);
         body.innerHTML = h;
+    }
+    // ===== تعديل كامل للطلب (المدير فقط) =====
+    function openMgrEdit(id) {
+        if (!currentUser || currentUser.role !== 'manager') return;
+        const data = getData(), r = data.requests.find(x => x.id === id);
+        if (!r) { showToast('❌ الطلب غير موجود', 'error'); return; }
+        const opt = (v, t, sel) => `<option value="${esc(v)}"${sel ? ' selected' : ''}>${esc(t)}</option>`;
+        const clients = data.users.filter(u => u.role === 'client').map(u => u.username);
+        if (r.clientName && !clients.includes(r.clientName)) clients.push(r.clientName);
+        $id('mgClient').innerHTML = clients.map(c => opt(c, c, c === r.clientName)).join('');
+        const techs = data.users.filter(u => u.role === 'technician').map(u => u.username);
+        if (r.sentToTech && !techs.includes(r.sentToTech)) techs.push(r.sentToTech);
+        $id('mgTech').innerHTML = opt('', '— غير مرسل لفني —', !r.sentToTech) + techs.map(t => opt(t, t, t === r.sentToTech)).join('');
+        $id('mgId').value = r.id;
+        $id('mgInfo').textContent = `${r.id} • ${requestAccountDisplayName(r)} • ${r.serialNumber}`;
+        $id('mgUnit').value = r.unitName || '';
+        $id('mgPhone').value = r.clientPhone || '';
+        $id('mgType').value = r.deviceType || '';
+        $id('mgSerial').value = r.serialNumber || '';
+        $id('mgPriority').value = r.priority || 'normal';
+        $id('mgStatus').value = r.status || 'pending';
+        $id('mgProgress').value = Number(r.progress) || 0;
+        $id('mgDetails').value = r.deviceDetails || '';
+        $id('mgAccessories').value = r.accessories || '';
+        $id('mgPrice').value = Number(r.price) || '';
+        $id('mgEta').value = r.eta || '';
+        $id('mgWarranty').value = r.warrantyDays != null ? r.warrantyDays : '';
+        openModal('mgrEditModal');
+    }
+    function mgrEditSave() {
+        if (!currentUser || currentUser.role !== 'manager') return;
+        const data = getData(), r = data.requests.find(x => x.id === $id('mgId').value);
+        if (!r) { showToast('❌ الطلب غير موجود', 'error'); return; }
+        const serial = $id('mgSerial').value.trim();
+        if (!serial) { showToast('⚠️ السيريال مطلوب', 'warning'); return; }
+        const progress = Math.max(0, Math.min(100, parseInt($id('mgProgress').value) || 0));
+        const changes = [];
+        const set = (k, v, label) => { if ((r[k] == null ? '' : r[k]) !== v) { changes.push(label); r[k] = v; } };
+        const newClient = $id('mgClient').value;
+        if (newClient && newClient !== r.clientName) {
+            const u = data.users.find(x => x.username === newClient);
+            r.clientName = newClient; changes.push('العميل');
+            // لو التليفون لسه هو تليفون العميل القديم (المدير ما غيّرهوش)، ننقله لتليفون العميل الجديد
+            if (u && u.phone && ($id('mgPhone').value.trim() === '' || $id('mgPhone').value.trim() === (r.clientPhone || ''))) $id('mgPhone').value = u.phone;
+        }
+        set('unitName', $id('mgUnit').value.trim(), 'اسم الوحدة');
+        set('clientPhone', $id('mgPhone').value.trim(), 'التليفون');
+        set('deviceType', $id('mgType').value.trim(), 'نوع الجهاز');
+        set('serialNumber', serial, 'السيريال');
+        set('priority', $id('mgPriority').value, 'الأولوية');
+        set('status', $id('mgStatus').value, 'الحالة');
+        set('progress', progress, 'التقدم');
+        set('deviceDetails', $id('mgDetails').value.trim(), 'التفاصيل');
+        set('accessories', $id('mgAccessories').value.trim(), 'المشتملات');
+        const price = $id('mgPrice').value === '' ? 0 : Math.max(0, Number($id('mgPrice').value) || 0);
+        set('price', price, 'التكلفة');
+        set('eta', $id('mgEta').value || '', 'موعد التسليم');
+        if ($id('mgWarranty').value !== '') set('warrantyDays', Math.max(0, parseInt($id('mgWarranty').value) || 0), 'الضمان');
+        const tech = $id('mgTech').value;
+        if (tech !== (r.sentToTech || '')) {
+            changes.push('الفني');
+            if (tech) {
+                r.sentToTech = tech; r.techStatus = 'sent'; r.sentToTechBy = currentUser.username; r.sentToTechAt = new Date().toLocaleString('ar-EG');
+                r.techReceivedAt = ''; r.techReceivedBy = '';
+            } else { r.sentToTech = ''; r.techStatus = ''; }
+        }
+        if (!changes.length) { showToast('لا يوجد تغيير', 'info'); closeModal('mgrEditModal'); return; }
+        saveData(data);
+        addLog(`عدّل المدير ${currentUser.username} الطلب ${r.id} (${changes.join('، ')})`);
+        showToast('✅ تم حفظ تعديلات الطلب', 'success');
+        closeModal('mgrEditModal');
+        loadManagerRequestsV2();
+        if (typeof updateAllStats === 'function') updateAllStats();
     }
     function omReq() { return getData().requests.find(x => x.id === orderModalId); }
     function omSaveDetails() {
