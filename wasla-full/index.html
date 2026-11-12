@@ -2274,12 +2274,12 @@ body{background:radial-gradient(ellipse at 8% 8%,rgba(32,129,185,.17),transparen
             <div id="technicianRequestsContainer"></div>
         </div>
 
-        <!-- ===== لوحة مسؤول الحسابات الحكومية ===== -->
+        <!-- ===== لوحة مشاهد جميع الأجهزة (قراءة فقط) ===== -->
         <div class="panel" id="govViewerPanel">
-            <h2 style="color:#0ea5e9;">🏛️ لوحة الأجهزة الحكومية</h2>
+            <h2 style="color:#0ea5e9;">👁️ متابعة جميع الأجهزة</h2>
+            <p style="color:#8892b0;font-size:13px;margin:6px 0 14px;">صلاحية مشاهدة فقط — يمكنك الاطلاع على تفاصيل كل الأجهزة والبحث بينها دون إضافة أو تعديل أو حذف.</p>
             <div class="cards">
-                <div class="card"><div class="icon">📦</div><h3>إضافة جهاز لحساب حكومي</h3><p style="color:#8892b0;font-size:12px;">يمكنك تسجيل جهاز جديد فقط دون تعديل أو حذف الطلبات الحالية</p><button class="btn" onclick="openModal('requestModal')">➕ إضافة جهاز</button></div>
-                <div class="card"><div class="icon">📋</div><h3>الأجهزة الحكومية</h3><p style="color:#8892b0;font-size:12px;">عرض جميع الأجهزة المسجلة على الحسابات الحكومية</p><button class="btn" onclick="loadGovernmentViewerRequests()">🔄 تحديث القائمة</button></div>
+                <div class="card"><div class="icon">📋</div><h3>كل أجهزة الموقع</h3><p style="color:#8892b0;font-size:12px;">عرض الأجهزة التابعة للحسابات الحكومية والعادية مع تفاصيلها.</p><button class="btn" onclick="loadGovernmentViewerRequests()">🔄 تحديث القائمة</button></div>
             </div>
             <div id="govViewerRequestsContainer"></div>
         </div>
@@ -2359,7 +2359,7 @@ body{background:radial-gradient(ellipse at 8% 8%,rgba(32,129,185,.17),transparen
                             <option value="cashier">💰 كاشير</option>
                             <option value="technician">🔧 فني صيانة</option>
                             <option value="manager">👨‍💼 مدير</option>
-                            <option value="govviewer">🏛️ مسؤول عرض وإضافة الأجهزة الحكومية</option>
+                            <option value="govviewer">👁️ مشاهد جميع الأجهزة (قراءة فقط)</option>
                         </select>
                         <select id="mNewUserClientType" title="نوع العميل" onchange="refreshNewUserDeptUI()"><option value="">👤 عميل عادي</option><option value="gov">🏛️ عميل حكومي</option><option value="dept">🏢 حساب إدارة حكومي</option></select>
                         <input type="tel" id="mNewUserPhone" placeholder="📱 رقم الموبايل *" required>
@@ -3799,7 +3799,7 @@ body{background:radial-gradient(ellipse at 8% 8%,rgba(32,129,185,.17),transparen
         const pb = document.getElementById('pwBtn'); if (pb) pb.style.display = 'inline-block';
         document.getElementById('chatFloatBtn').style.display = 'flex';
 
-        const roleNames = { client: 'عميل', cashier: 'كاشير', technician: 'فني صيانة', manager: 'مدير', govviewer: 'مسؤول حكومي' };
+        const roleNames = { client: 'عميل', cashier: 'كاشير', technician: 'فني صيانة', manager: 'مدير', govviewer: 'مشاهد الأجهزة' };
         const badgeClass = { client: 'badge-client', cashier: 'badge-cashier', technician: 'badge-technician', manager: 'badge-manager', govviewer: 'badge-manager' };
         let contactInfo = '';
         if (user.phone) contactInfo += `📱 ${user.phone} `;
@@ -4021,6 +4021,7 @@ body{background:radial-gradient(ellipse at 8% 8%,rgba(32,129,185,.17),transparen
 
     // ====== دوال المودال ======
     function openModal(id) {
+        if (currentUser && currentUser.role === 'govviewer') { showToast('👁️ هذا الحساب للمشاهدة فقط', 'warning'); return; }
         document.getElementById(id).classList.add('active');
         if (id === 'invoiceModal') {
             document.getElementById('invoiceResult').style.display = 'none';
@@ -4213,8 +4214,9 @@ body{background:radial-gradient(ellipse at 8% 8%,rgba(32,129,185,.17),transparen
         const container = document.getElementById('govViewerRequestsContainer');
         if (!container) return;
         container.innerHTML = `
-            <div class="search-box"><input type="text" id="govViewerSearch" placeholder="🔍 بحث باسم الحساب أو السيريال أو رقم الوصل..." oninput="renderGovernmentViewerRequests()">
+            <div class="search-box"><input type="text" id="govViewerSearch" placeholder="🔍 ابحث باسم الحساب أو العميل أو السيريال أو نوع الجهاز..." oninput="renderGovernmentViewerRequests()">
                 <select id="govViewerStatus" onchange="renderGovernmentViewerRequests()"><option value="all">كل الحالات</option><option value="pending">قيد الانتظار</option><option value="cashier_received">استلمه الكاشير</option><option value="manager_accepted">في المخزن</option><option value="ready_for_pickup">جاهز للاستلام</option><option value="picked_up">تم التسليم</option></select></div>
+            <div id="govViewerCount" style="font-size:12px;color:#0ea5e9;margin:8px 2px;"></div>
             <div id="govViewerRequestsTable"></div>`;
         renderGovernmentViewerRequests();
     }
@@ -4224,9 +4226,11 @@ body{background:radial-gradient(ellipse at 8% 8%,rgba(32,129,185,.17),transparen
         const q = (document.getElementById('govViewerSearch')?.value || '').toLowerCase();
         const st = document.getElementById('govViewerStatus')?.value || 'all';
         let rows = data.requests.filter(r => {
-            const hit = !q || [r.clientName, r.serialNumber, r.id, r.deviceType, r.unitName].some(v => String(v || '').toLowerCase().includes(q));
+            const hit = !q || [r.clientName, r.createdBy, r.serialNumber, r.id, r.deviceType, r.category, r.unitName, r.deviceDetails, r.clientPhone, r.clientEmail].some(v => String(v || '').toLowerCase().includes(q));
             return hit && (st === 'all' || r.status === st);
         });
+        const count = document.getElementById('govViewerCount');
+        if (count) count.textContent = `عدد الأجهزة المعروضة: ${rows.length} من إجمالي ${data.requests.length}`;
         renderRequestsTable(rows, 'govViewerRequestsTable', 'govviewer');
     }
 
@@ -4329,7 +4333,7 @@ body{background:radial-gradient(ellipse at 8% 8%,rgba(32,129,185,.17),transparen
             container.innerHTML = '<div class="empty-state">🚫 لا يوجد مستخدمين</div>';
             return;
         }
-        const roleNames = { client: 'عميل', cashier: 'كاشير', technician: 'فني صيانة', manager: 'مدير', govviewer: 'مسؤول حكومي' };
+        const roleNames = { client: 'عميل', cashier: 'كاشير', technician: 'فني صيانة', manager: 'مدير', govviewer: 'مشاهد الأجهزة' };
         const roleColors = { client: '#3498db', cashier: '#f39c12', technician: '#9b59b6', manager: '#2ecc71', govviewer: '#0ea5e9' };
         let html = '<div class="users-grid">';
         data.users.forEach(u => {
@@ -4653,6 +4657,7 @@ body{background:radial-gradient(ellipse at 8% 8%,rgba(32,129,185,.17),transparen
 
     // ====== دوال العميل ======
     function submitRequest() {
+        if (currentUser && currentUser.role === 'govviewer') { showToast('👁️ هذا الحساب للمشاهدة فقط ولا يمكنه إضافة أجهزة', 'warning'); return; }
         const clientName = (currentUser && currentUser.role === 'client') ? currentUser.username : (currentUser && currentUser.role === 'govviewer' ? document.getElementById('reqGovClientName').value : document.getElementById('reqClientName').value.trim());
         const priority = document.getElementById('reqPriority').value;
         const deviceType = document.getElementById('reqDeviceType').value;
@@ -5129,6 +5134,7 @@ ${i+1}. المعرف: ${r.id}
                 <th>#</th>
                 <th>اسم الحساب (عامل الطلب)</th>
                 <th>العميل</th>
+                ${role === 'govviewer' ? '<th>الفئة</th><th>الوحدة / القسم</th><th>تاريخ التسجيل</th>' : ''}
                 <th>📱 الموبايل</th>
                 <th>📧 الإيميل</th>
                 <th>السيريال</th>
@@ -5179,7 +5185,8 @@ ${i+1}. المعرف: ${r.id}
                 <td>${index + 1}</td>
                 <td><strong>${esc(creatorOf(r))}</strong><div style="font-size:10px;color:#8892b0;cursor:pointer;" title="رقم الوصل — اضغط للنسخ" onclick="copyRequestId('${esc(r.id)}')">${esc(r.id)}</div></td>
                 <td>${esc(requestAccountDisplayName(r))}</td>
-                <td style="font-size:12px;">${r.clientPhone || '-'}</td>
+                ${role === 'govviewer' ? `<td>${esc(r.category || '-')}</td><td>${esc(r.unitName || '-')}</td><td style="font-size:12px;white-space:nowrap;">${esc(r.createdAt || '-')}</td>` : ''}
+                <td style="font-size:12px;">${esc(r.clientPhone || '-')}</td>
                 <td style="font-size:12px;">${r.clientEmail || '-'}</td>
                 <td>${r.serialNumber}</td>
                 <td>${r.deviceType || '-'}</td>
@@ -8250,8 +8257,8 @@ function whDoMove() {
   }
   function top() { window.scrollTo({ top: 0, behavior: 'smooth' }); }
   function buzz() { try { navigator.vibrate && navigator.vibrate(8); } catch (e) {} }
-  var TITLES = { client: 'لوحة العميل', cashier: 'لوحة الكاشير', technician: 'لوحة الفني', manager: 'لوحة المدير', govviewer: 'الأجهزة الحكومية' };
-  var ROLE_AR = { client: 'عميل', cashier: 'كاشير', technician: 'فني صيانة', manager: 'مدير', govviewer: 'مسؤول حكومي' };
+  var TITLES = { client: 'لوحة العميل', cashier: 'لوحة الكاشير', technician: 'لوحة الفني', manager: 'لوحة المدير', govviewer: 'متابعة جميع الأجهزة' };
+  var ROLE_AR = { client: 'عميل', cashier: 'كاشير', technician: 'فني صيانة', manager: 'مدير', govviewer: 'مشاهد الأجهزة' };
   var MTABS = { 'manager-dashboard': 'لوحة التحكم', 'manager-requests': 'الطلبات', 'manager-users': 'المستخدمين', 'manager-chats': 'المحادثات', 'manager-ratings': 'التقييمات', 'manager-logs': 'السجل', 'manager-alerts': 'التنبيهات', 'manager-reports': 'التقارير', 'manager-parts': 'قطع الغيار', 'manager-warehouses': 'المخازن', 'manager-settings': 'الإعدادات' };
 
   function items(r) {
@@ -8265,8 +8272,7 @@ function whDoMove() {
     ];
     if (r === 'govviewer') return [
       { id: 'home', i: 'home', l: 'الرئيسية', f: top },
-      { id: 'gov-requests', i: 'list', l: 'الأجهزة', f: function () { call('loadGovernmentViewerRequests'); go('govViewerRequestsContainer'); } },
-      { id: 'fab', fab: 1, i: 'plus', l: 'إضافة جهاز', f: function () { call('openModal', 'requestModal'); } },
+      { id: 'gov-requests', i: 'list', l: 'كل الأجهزة', f: function () { call('loadGovernmentViewerRequests'); go('govViewerRequestsContainer'); } },
       { id: 'more', i: 'user', l: 'حسابي', f: openSheet }
     ];
     if (r === 'client') return [
